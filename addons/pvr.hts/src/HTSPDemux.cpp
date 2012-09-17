@@ -48,9 +48,6 @@ bool CHTSPDemux::Open(const PVR_CHANNEL &channelinfo)
   m_channel = channelinfo.iUniqueId;
   m_bIsRadio = channelinfo.bIsRadio;
 
-  if (!m_session)
-    m_session = new CHTSPConnection();
-
   if(!m_session->Connect())
     return false;
 
@@ -76,13 +73,21 @@ bool CHTSPDemux::GetStreamProperties(PVR_STREAM_PROPERTIES* props)
     props->stream[i].iPhysicalId    = m_Streams.stream[i].iPhysicalId;
     props->stream[i].iCodecType     = m_Streams.stream[i].iCodecType;
     props->stream[i].iCodecId       = m_Streams.stream[i].iCodecId;
-    props->stream[i].iHeight        = m_Streams.stream[i].iHeight;
-    props->stream[i].iWidth         = m_Streams.stream[i].iWidth;
     props->stream[i].strLanguage[0] = m_Streams.stream[i].strLanguage[0];
     props->stream[i].strLanguage[1] = m_Streams.stream[i].strLanguage[1];
     props->stream[i].strLanguage[2] = m_Streams.stream[i].strLanguage[2];
     props->stream[i].strLanguage[3] = m_Streams.stream[i].strLanguage[3];
     props->stream[i].iIdentifier    = m_Streams.stream[i].iIdentifier;
+    props->stream[i].iFPSScale      = m_Streams.stream[i].iFPSScale;
+    props->stream[i].iFPSRate       = m_Streams.stream[i].iFPSRate;
+    props->stream[i].iHeight        = m_Streams.stream[i].iHeight;
+    props->stream[i].iWidth         = m_Streams.stream[i].iWidth;
+    props->stream[i].fAspect        = m_Streams.stream[i].fAspect;
+    props->stream[i].iChannels      = m_Streams.stream[i].iChannels;
+    props->stream[i].iSampleRate    = m_Streams.stream[i].iSampleRate;
+    props->stream[i].iBlockAlign    = m_Streams.stream[i].iBlockAlign;
+    props->stream[i].iBitRate       = m_Streams.stream[i].iBitRate;
+    props->stream[i].iBitsPerSample = m_Streams.stream[i].iBitsPerSample;
   }
   return (props->iStreamCount > 0);
 }
@@ -241,7 +246,11 @@ inline void HTSPSetDemuxStreamInfoVideo(PVR_STREAM_PROPERTIES::PVR_STREAM &strea
 {
   stream.iWidth  = htsmsg_get_u32_or_default(msg, "width" , 0);
   stream.iHeight = htsmsg_get_u32_or_default(msg, "height" , 0);
-  stream.fAspect = (float) (htsmsg_get_u32_or_default(msg, "aspect_num", 1) / htsmsg_get_u32_or_default(msg, "aspect_den", 1));
+  unsigned int den = htsmsg_get_u32_or_default(msg, "aspect_den", 1);
+  if(den)
+    stream.fAspect = (float)htsmsg_get_u32_or_default(msg, "aspect_num", 1) / den;
+  else
+    stream.fAspect = 0.0f;
 }
 
 inline void HTSPSetDemuxStreamInfoLanguage(PVR_STREAM_PROPERTIES::PVR_STREAM &stream, htsmsg_t *msg)
@@ -272,6 +281,12 @@ void CHTSPDemux::ParseSubscriptionStart(htsmsg_t *m)
     uint32_t    index;
     const char* type;
     htsmsg_t*   sub;
+
+    if (m_Streams.iStreamCount >= PVR_STREAM_MAX_STREAMS)
+    {
+      XBMC->Log(LOG_ERROR, "%s - max amount of streams reached", __FUNCTION__);
+      break;
+    }
 
     if (f->hmf_type != HMF_MAP)
       continue;
@@ -358,12 +373,6 @@ void CHTSPDemux::ParseSubscriptionStart(htsmsg_t *m)
       else if (m_Streams.stream[m_Streams.iStreamCount].iCodecType == AVMEDIA_TYPE_VIDEO)
         HTSPSetDemuxStreamInfoVideo(m_Streams.stream[m_Streams.iStreamCount], sub);
       ++m_Streams.iStreamCount;
-    }
-
-    if (m_Streams.iStreamCount >= PVR_STREAM_MAX_STREAMS)
-    {
-      XBMC->Log(LOG_ERROR, "%s - max amount of streams reached", __FUNCTION__);
-      break;
     }
   }
 

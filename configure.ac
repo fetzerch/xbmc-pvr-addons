@@ -5,7 +5,7 @@ AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, AC_PACKAGE_VERSION, [http://www.xbmc.org])
 
-PREFIX_DEFAULT="/usr"
+PREFIX_DEFAULT="/usr/local"
 AC_PREFIX_DEFAULT($PREFIX_DEFAULT)
 
 AC_PROG_CXX
@@ -131,6 +131,9 @@ AC_SUBST(DATADIR)
 
 AC_OUTPUT([Makefile
            lib/Makefile
+           lib/cmyth/Makefile
+           lib/cmyth/libcmyth/Makefile
+           lib/cmyth/librefmem/Makefile
            lib/jsoncpp/Makefile
            lib/libhts/Makefile
            lib/tinyxml/Makefile
@@ -139,6 +142,7 @@ AC_OUTPUT([Makefile
            addons/pvr.fortherecord.argus/Makefile
            addons/pvr.hts/Makefile
            addons/pvr.mediaportal.tvserver/Makefile
+           addons/pvr.mythtv.cmyth/Makefile
            addons/pvr.njoy/Makefile
            addons/pvr.vdr.vnsi/Makefile])
 
