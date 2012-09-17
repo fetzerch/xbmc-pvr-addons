@@ -40,8 +40,6 @@ CStdString   g_szMythDBname           = DEFAULT_DB_NAME;          ///< The mytht
 bool         g_bExtraDebug            = DEFAULT_EXTRA_DEBUG;      ///< Output extensive debug information to the log
 bool         g_bLiveTVPriority        = DEFAULT_LIVETV_PRIORITY;  ///< MythTV Backend setting to allow live TV to move scheduled shows
 int          g_iMinMovieLength        = DEFAULT_MIN_MOVIE_LENGTH; ///< Minimum length (in minutes) of a recording to be considered to be a movie
-CStdString   g_szSeriesRegEx          = DEFAULT_SERIES_REGEX;     ///< The Regular expression to use to extract the series name (and maybe also episode number)
-CStdString   g_szSeriesIdentifier     = DEFAULT_SERIES_IDENTIFIER;///< Optional regular expression to use to detect series
 ///* Client member variables */
 
 bool         m_recordingFirstRead;
@@ -183,28 +181,6 @@ ADDON_STATUS ADDON_Create(void* hdl, void* props)
     g_iMinMovieLength = DEFAULT_MIN_MOVIE_LENGTH;
   }
   
-  /* Read setting "db_name" from settings.xml */
-  if (XBMC->GetSetting("series_regex", buffer))
-    g_szSeriesRegEx = buffer;
-  else
-  {
-    /* If setting is unknown fallback to defaults */
-    XBMC->Log(LOG_ERROR, "Couldn't get 'series_regex' setting, falling back to '%s' as default", DEFAULT_SERIES_REGEX);
-    g_szSeriesRegEx = DEFAULT_SERIES_REGEX;
-  }
-  buffer[0] = 0;
-
-  /* Read setting "db_name" from settings.xml */
-  if (XBMC->GetSetting("series_regex_id", buffer))
-    g_szSeriesIdentifier = buffer;
-  else
-  {
-    /* If setting is unknown fallback to defaults */
-    XBMC->Log(LOG_ERROR, "Couldn't get 'series_regex_id' setting, falling back to '%s' as default", DEFAULT_SERIES_IDENTIFIER);
-    g_szSeriesIdentifier = DEFAULT_SERIES_IDENTIFIER;
-  }
-  buffer[0] = 0;
-
   free (buffer);
 
   XBMC->Log(LOG_DEBUG,"Creating PVRClientMythTV...");
@@ -348,18 +324,6 @@ ADDON_STATUS ADDON_SetSetting(const char *settingName, const void *settingValue)
 	  g_bExtraDebug = *(bool*) settingValue;
       return ADDON_STATUS_OK;
     }
-  }
-  else if (str == "series_regex")
-  {
-    XBMC->Log(LOG_INFO, "Changed Setting 'series_regex' from %s to %s", g_szSeriesRegEx.c_str(), (const char*) settingValue);
-    g_szSeriesRegEx = (const char*) settingValue;
-    return ADDON_STATUS_OK;
-  }
-  else if (str == "series_regex_id")
-  {
-    XBMC->Log(LOG_INFO, "Changed Setting 'series_regex_id' from %s to %s", g_szSeriesIdentifier.c_str(), (const char*) settingValue);
-    g_szSeriesIdentifier = (const char*) settingValue;
-    return ADDON_STATUS_OK;
   }
   else if (str == "min_movie_length")
   {
