@@ -665,7 +665,7 @@ cmyth_file_seek_unlocked(cmyth_file_t file, long long offset, int whence)
 }
 
 /*
- * cmyth_file_read(cmyth_recorder_t rec, char *buf, unsigned long len)
+ * cmyth_file_read(cmyth_file_t file, char *buf, unsigned long len)
  * 
  * Scope: PUBLIC
  *
@@ -841,6 +841,92 @@ int cmyth_file_read(cmyth_file_t file, char *buf, unsigned long len)
 		file->file_length = file->file_pos;
 
 	ret = (int)(cur - buf);
+out:
+	pthread_mutex_unlock (&mutex);
+	return ret;
+}
+
+/*
+ * cmyth_file_data_conn_fd(cmyth_file_t file)
+ * 
+ * Scope: PUBLIC
+ *
+ * Description
+ *
+ * Check if data socket is open
+ *
+ * Return Value:
+ *
+ * Opened: 1
+ * 
+ * Closed: 0
+ * 
+ * Failure: an int containing -errno
+ */
+int cmyth_file_data_conn_fd(cmyth_file_t file)
+{
+	int err, count;
+	int ret, nfds;
+	long status;
+	char msg[256];
+	struct timeval tv;
+	fd_set fds;
+
+	cmyth_dbg(CMYTH_DBG_DEBUG, "%s {\n", __FUNCTION__);
+	
+	if (!file || !file->file_control) {
+		cmyth_dbg (CMYTH_DBG_ERROR, "%s: no connection\n",
+		           __FUNCTION__);
+		return -EINVAL;
+	}
+	
+	pthread_mutex_lock (&mutex);
+
+	snprintf (msg, sizeof (msg),
+	    "QUERY_FILETRANSFER %ld[]:[]IS_OPEN",
+	    file->file_id);
+		
+	if ( (err = cmyth_send_message (file->file_control, msg) ) < 0) {
+		cmyth_dbg (CMYTH_DBG_ERROR,
+			    "%s: cmyth_send_message() failed (%d)\n",
+			    __FUNCTION__, err);
+		ret = err;
+		goto out;
+	}
+
+	tv.tv_sec = 20;
+	tv.tv_usec = 0;
+	FD_ZERO (&fds);
+	FD_SET (file->file_control->conn_fd, &fds);
+	nfds = (int)file->file_control->conn_fd;
+
+	if ((ret = select (nfds+1, &fds, NULL, NULL,&tv)) < 0) {
+		cmyth_dbg (CMYTH_DBG_ERROR,
+			    "%s: select(() failed (%d)\n",
+			    __FUNCTION__, ret);
+		goto out;
+	}
+	
+	if (FD_ISSET(file->file_control->conn_fd, &fds)) {
+		if ((count=cmyth_rcv_length (file->file_control)) < 0) {
+			cmyth_dbg (CMYTH_DBG_ERROR,
+				    "%s: cmyth_rcv_length() failed (%d)\n",
+				    __FUNCTION__, count);
+			ret = count;
+			goto out;
+		}
+		if ((ret=cmyth_rcv_long (file->file_control, &err, &status, count))< 0) {
+			cmyth_dbg (CMYTH_DBG_ERROR,
+				    "%s: cmyth_rcv_long() failed (%d)\n",
+				    __FUNCTION__, ret);
+			ret = err;
+			goto out;
+		}
+
+		ret = (int)status;
+		if (ret==0)
+			cmyth_dbg(CMYTH_DBG_ERROR, "%s: file transfer socket is closed before read\n", __FUNCTION__);
+	}
 out:
 	pthread_mutex_unlock (&mutex);
 	return ret;
