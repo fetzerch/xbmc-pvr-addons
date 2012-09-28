@@ -743,7 +743,6 @@ cmyth_livetv_chain_request_block(cmyth_recorder_t rec, unsigned long len)
 int cmyth_livetv_chain_read(cmyth_recorder_t rec, char *buf, unsigned long len)
 {
 	int ret, retry;
-	long chkfd;
 
 	cmyth_dbg(CMYTH_DBG_DEBUG, "%s [%s:%d]: (trace) {\n", 
         __FUNCTION__,	__FILE__, __LINE__);
