@@ -610,6 +610,8 @@ extern long long cmyth_livetv_chain_duration(cmyth_recorder_t rec);
 
 extern int cmyth_livetv_chain_switch(cmyth_recorder_t rec, int dir);
 
+extern int cmyth_livetv_chain_switch_unlocked(cmyth_recorder_t rec, int dir);
+
 extern int cmyth_livetv_chain_switch_last(cmyth_recorder_t rec);
 
 extern int cmyth_livetv_chain_update(cmyth_recorder_t rec, char * chainid,

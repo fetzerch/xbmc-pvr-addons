@@ -770,7 +770,6 @@ cmyth_livetv_chain_select(cmyth_recorder_t rec, struct timeval *timeout)
   return cmyth_file_select(rec->rec_livetv_file, timeout);
 }
 
-
 /*
  * cmyth_livetv_chain_switch(cmyth_recorder_t rec, int dir)
  * 
@@ -829,6 +828,82 @@ cmyth_livetv_chain_switch(cmyth_recorder_t rec, int dir)
 				 */
 				return 0;
 			}
+		}			
+	}
+
+	if((dir < 0 && rec->rec_livetv_chain->chain_current + dir >= 0)
+		|| (rec->rec_livetv_chain->chain_current <
+			  rec->rec_livetv_chain->chain_ct - dir )) {
+		ref_release(rec->rec_livetv_file);
+		ret = rec->rec_livetv_chain->chain_current += dir;
+		rec->rec_livetv_file = ref_hold(rec->rec_livetv_chain->chain_files[ret]);
+		cmyth_dbg(CMYTH_DBG_DEBUG, "%s: file switch to %d\n",__FUNCTION__,ret);
+		if (rec->rec_livetv_chain->prog_update_callback) {
+			rec->rec_livetv_chain
+					->prog_update_callback(rec->rec_livetv_chain->progs[ret]);
+		}
+		ret = 1;
+	}
+
+	return ret;
+}
+
+/*
+ * cmyth_livetv_chain_switch_unlocked(cmyth_recorder_t rec, int dir)
+ * 
+ * Scope: PUBLIC
+ *
+ * Description
+ *
+ * Switches to the next or previous chain depending on the
+ * value of dir. Dir is usually 1 or -1.
+ *
+ * Return Value:
+ *
+ * Sucess: 1
+ *
+ * Failure: 0
+ */
+int
+cmyth_livetv_chain_switch_unlocked(cmyth_recorder_t rec, int dir)
+{
+	int ret, i;
+
+	ret = 0;
+
+	if(dir == LAST) {
+		dir = rec->rec_livetv_chain->chain_ct
+				- rec->rec_livetv_chain->chain_current - 1;
+		ret = 1;
+	}
+
+	cmyth_dbg(CMYTH_DBG_DEBUG, "%s: switch file: current=%d , dir=%d\n",
+		  __FUNCTION__, rec->rec_livetv_chain->chain_current, dir);
+
+	if (dir > 0 && rec->rec_livetv_chain->chain_current == rec->rec_livetv_chain->chain_ct - dir ) {
+		 /* No more file in the chain */
+		cmyth_dbg(CMYTH_DBG_ERROR,
+			  "%s: no more file\n",
+			  __FUNCTION__);
+		/* JLB: Manage program breaks
+		 * If livetv_watch is down then we are waiting next chain update and adding a new file.
+		 * Timeout is 2 secondes before release.
+		 */ 
+		if ( rec->rec_livetv_chain->livetv_watch != 1 ) {
+			cmyth_dbg(CMYTH_DBG_ERROR,
+				  "%s: wait until livetv_watch is up\n",
+				  __FUNCTION__);
+			for ( i = 0; i < 4; i++ ) {
+				usleep(500000);
+				if ( rec->rec_livetv_chain->livetv_watch == 1 )
+					break;
+			}
+			if ( rec->rec_livetv_chain->livetv_watch != 1 ) {
+				/* The chain is not updated yet
+				 * Return to retry later
+				 */
+				return 0;
+			}
 		}
 		/* JLB: Current buffer is empty on the last file.
 		 * We are waiting refilling the buffer until file data
@@ -840,11 +915,7 @@ cmyth_livetv_chain_switch(cmyth_recorder_t rec, int dir)
 				  "%s: wait some time before request block\n",
 				  __FUNCTION__);
 			//for ( i = 0; i < 4; i++ ) {
-			pthread_mutex_unlock(&mutex);
-			/* Check file data connection. If up then wait */
-			if ( cmyth_file_data_conn_fd(rec->rec_livetv_file) == 1 )
-				usleep(500000);
-			pthread_mutex_lock(&mutex);
+			usleep(500000);
 			//}
 		}
 			
@@ -972,9 +1043,7 @@ int cmyth_livetv_chain_read(cmyth_recorder_t rec, char *buf, unsigned long len)
 		}
 		if (ret == 0) {
 			/* eof, switch to next file */
-			pthread_mutex_lock(&mutex);
-			retry = cmyth_livetv_chain_switch(rec, 1);
-			pthread_mutex_unlock(&mutex);
+			retry = cmyth_livetv_chain_switch_unlocked(rec, 1);
 		}
 	} while(retry);
 
