@@ -1212,17 +1212,24 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
 {
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG,"%s - chanID: %i, channumber: %i", __FUNCTION__, channel.iUniqueId, channel.iChannelNumber);
-
+  
   CLockObject lock(m_lock);
   if (m_rec.IsNull())
   {
+    // Stop fileOps thread to avoid connection hang
+    if (m_fileOps)
+    {
+      delete m_fileOps;
+      m_fileOps = NULL;
+    }
+
     MythChannel chan = m_channels.at(channel.iUniqueId);
     for (std::vector<int>::iterator it = m_sources.at(chan.SourceID()).begin(); it != m_sources.at(chan.SourceID()).end(); it++)
     {
       m_rec = m_con.GetRecorder(*it);
       if (!m_rec.IsRecording() && m_rec.IsTunable(chan))
-      {
-        if (g_bExtraDebug)
+      {	
+	if (g_bExtraDebug)
           XBMC->Log(LOG_DEBUG,"%s: Opening new recorder %i", __FUNCTION__, m_rec.ID());
 
         if (m_pEventHandler)
@@ -1237,7 +1244,13 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
         m_pEventHandler->SetRecorder(m_rec); // Redundant
       }
     }
-
+    
+    // Restart fileOps
+    if (!m_fileOps)
+    {
+      m_fileOps = new FileOps(m_con);
+    }
+    
     if (g_bExtraDebug)
       XBMC->Log(LOG_DEBUG,"%s - Done", __FUNCTION__);
 
@@ -1272,6 +1285,12 @@ void PVRClientMythTV::CloseLiveStream()
     m_pEventHandler->AllowLiveChainUpdate();
   }
 
+  // Restart fileOps
+  if (!m_fileOps)
+  {
+    m_fileOps = new FileOps(m_con);
+  }
+  
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - Done", __FUNCTION__);
 
@@ -1410,6 +1429,13 @@ bool PVRClientMythTV::OpenRecordedStream(const PVR_RECORDING &recinfo)
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - title: %s, ID: %s, duration: %i", __FUNCTION__, recinfo.strTitle, recinfo.strRecordingId, recinfo.iDuration);
 
+  // Stop fileOps thread to avoid connection hang
+  if (m_fileOps)
+  {
+    delete m_fileOps;
+    m_fileOps = NULL;
+  }
+    
   CStdString id = recinfo.strRecordingId;
   if (*id.rbegin() == '@')
     id = id.substr(0, id.size() - 1);
@@ -1417,6 +1443,12 @@ bool PVRClientMythTV::OpenRecordedStream(const PVR_RECORDING &recinfo)
   m_file = m_con.ConnectFile(m_recordings.at(id));
   if (m_pEventHandler)
     m_pEventHandler->SetRecordingListener(id, m_file);
+
+  // Restart fileOps
+  if (!m_file.IsNull() && !m_fileOps)
+  {
+    m_fileOps = new FileOps(m_con);
+  }
 
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - Done - %i", __FUNCTION__, !m_file.IsNull());
@@ -1430,6 +1462,12 @@ void PVRClientMythTV::CloseRecordedStream()
     XBMC->Log(LOG_DEBUG, "%s", __FUNCTION__);
 
   m_file = MythFile();
+
+  // Restart fileOps
+  if (!m_fileOps)
+  {
+    m_fileOps = new FileOps(m_con);
+  }
 
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - Done", __FUNCTION__);
