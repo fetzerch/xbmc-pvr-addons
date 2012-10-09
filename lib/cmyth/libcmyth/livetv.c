@@ -905,20 +905,6 @@ cmyth_livetv_chain_switch_unlocked(cmyth_recorder_t rec, int dir)
 				return 0;
 			}
 		}
-		/* JLB: Current buffer is empty on the last file.
-		 * We are waiting refilling the buffer until file data
-		 * connection is up.
-		 * Timeout is 0.5 seconde before release.
-		 */
-		else {
-			cmyth_dbg(CMYTH_DBG_ERROR,
-				  "%s: wait some time before request block\n",
-				  __FUNCTION__);
-			//for ( i = 0; i < 4; i++ ) {
-			usleep(500000);
-			//}
-		}
-			
 	}
 
 	if((dir < 0 && rec->rec_livetv_chain->chain_current + dir >= 0)
