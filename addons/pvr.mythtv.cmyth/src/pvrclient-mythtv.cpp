@@ -663,7 +663,8 @@ PVR_ERROR PVRClientMythTV::GetRecordings(ADDON_HANDLE handle)
       tag.iDuration = it->second.Duration();
       tag.iPlayCount = it->second.IsWatched() ? 1 : 0;
 
-      CStdString id = it->second.Path();
+      CStdString id = it->second.StrUID();
+      CStdString path = it->second.Path();
       CStdString title = it->second.Title(true);
 
       PVR_STRCPY(tag.strRecordingId, id);
@@ -683,7 +684,7 @@ PVR_ERROR PVRClientMythTV::GetRecordings(ADDON_HANDLE handle)
       // Images
       CStdString strIconPath = GetArtWork(FileOps::FileTypeCoverart, title);
       if (strIconPath.IsEmpty())
-        strIconPath = m_fileOps->GetPreviewIconPath(id + ".png");
+        strIconPath = m_fileOps->GetPreviewIconPath(path + ".png");
 
       CStdString strFanartPath = GetArtWork(FileOps::FileTypeFanart, title);
 
@@ -1211,17 +1212,23 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
 {
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG,"%s - chanID: %i, channumber: %i", __FUNCTION__, channel.iUniqueId, channel.iChannelNumber);
-
+  
   CLockObject lock(m_lock);
   if (m_rec.IsNull())
   {
+    // Stop fileOps thread to avoid connection hang
+    if (m_fileOps->IsRunning())
+    {
+      m_fileOps->StopThread();
+    }
+
     MythChannel chan = m_channels.at(channel.iUniqueId);
     for (std::vector<int>::iterator it = m_sources.at(chan.SourceID()).begin(); it != m_sources.at(chan.SourceID()).end(); it++)
     {
       m_rec = m_con.GetRecorder(*it);
       if (!m_rec.IsRecording() && m_rec.IsTunable(chan))
-      {
-        if (g_bExtraDebug)
+      {	
+	if (g_bExtraDebug)
           XBMC->Log(LOG_DEBUG,"%s: Opening new recorder %i", __FUNCTION__, m_rec.ID());
 
         if (m_pEventHandler)
@@ -1236,7 +1243,13 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
         m_pEventHandler->SetRecorder(m_rec); // Redundant
       }
     }
-
+    
+    // Restart fileOps
+    if (m_fileOps->IsStopped())
+    {
+      m_fileOps->Clear();
+    }
+    
     if (g_bExtraDebug)
       XBMC->Log(LOG_DEBUG,"%s - Done", __FUNCTION__);
 
@@ -1271,6 +1284,12 @@ void PVRClientMythTV::CloseLiveStream()
     m_pEventHandler->AllowLiveChainUpdate();
   }
 
+  // Restart fileOps
+  if (m_fileOps->IsStopped())
+  {
+    m_fileOps->Clear();
+  }
+  
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - Done", __FUNCTION__);
 
@@ -1314,20 +1333,13 @@ bool PVRClientMythTV::SwitchChannel(const PVR_CHANNEL &channelinfo)
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - chanID: %i", __FUNCTION__, channelinfo.iUniqueId);
 
-  MythChannel chan = m_channels.at(channelinfo.iUniqueId);
   bool retval = false;
-  retval = m_rec.SetChannel(chan);
+
+  CloseLiveStream();
+  retval = OpenLiveStream(channelinfo);
+
   if (!retval)
-  {
-    if (g_bExtraDebug)
-      XBMC->Log(LOG_INFO, "%s - Failed to change to channel: %s(%i) - Reopening Livestream", __FUNCTION__, channelinfo.strChannelName, channelinfo.iUniqueId);
-
-    CloseLiveStream();
-    retval = OpenLiveStream(channelinfo);
-
-    if (!retval)
-      XBMC->Log(LOG_ERROR, "%s - Failed to reopening Livestream", __FUNCTION__);
-  }
+    XBMC->Log(LOG_ERROR, "%s - Failed to reopening Livestream", __FUNCTION__);
 
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - Done", __FUNCTION__);
@@ -1416,6 +1428,12 @@ bool PVRClientMythTV::OpenRecordedStream(const PVR_RECORDING &recinfo)
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - title: %s, ID: %s, duration: %i", __FUNCTION__, recinfo.strTitle, recinfo.strRecordingId, recinfo.iDuration);
 
+  // Stop fileOps thread to avoid connection hang
+  if (m_fileOps->IsRunning())
+  {
+    m_fileOps->StopThread();
+  }
+    
   CStdString id = recinfo.strRecordingId;
   if (*id.rbegin() == '@')
     id = id.substr(0, id.size() - 1);
@@ -1423,6 +1441,12 @@ bool PVRClientMythTV::OpenRecordedStream(const PVR_RECORDING &recinfo)
   m_file = m_con.ConnectFile(m_recordings.at(id));
   if (m_pEventHandler)
     m_pEventHandler->SetRecordingListener(id, m_file);
+
+  // Restart fileOps
+  if (m_file.IsNull() && m_fileOps->IsStopped())
+  {
+    m_fileOps->Clear();
+  }
 
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - Done - %i", __FUNCTION__, !m_file.IsNull());
@@ -1436,6 +1460,12 @@ void PVRClientMythTV::CloseRecordedStream()
     XBMC->Log(LOG_DEBUG, "%s", __FUNCTION__);
 
   m_file = MythFile();
+
+  // Restart fileOps
+  if (m_fileOps->IsStopped())
+  {
+    m_fileOps->Clear();
+  }
 
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - Done", __FUNCTION__);
