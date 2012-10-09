@@ -1217,10 +1217,9 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
   if (m_rec.IsNull())
   {
     // Stop fileOps thread to avoid connection hang
-    if (m_fileOps)
+    if (m_fileOps->IsRunning())
     {
-      delete m_fileOps;
-      m_fileOps = NULL;
+      m_fileOps->StopThread();
     }
 
     MythChannel chan = m_channels.at(channel.iUniqueId);
@@ -1246,9 +1245,9 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
     }
     
     // Restart fileOps
-    if (!m_fileOps)
+    if (m_fileOps->IsStopped())
     {
-      m_fileOps = new FileOps(m_con);
+      m_fileOps->Clear();
     }
     
     if (g_bExtraDebug)
@@ -1286,9 +1285,9 @@ void PVRClientMythTV::CloseLiveStream()
   }
 
   // Restart fileOps
-  if (!m_fileOps)
+  if (m_fileOps->IsStopped())
   {
-    m_fileOps = new FileOps(m_con);
+    m_fileOps->Clear();
   }
   
   if (g_bExtraDebug)
@@ -1430,10 +1429,9 @@ bool PVRClientMythTV::OpenRecordedStream(const PVR_RECORDING &recinfo)
     XBMC->Log(LOG_DEBUG, "%s - title: %s, ID: %s, duration: %i", __FUNCTION__, recinfo.strTitle, recinfo.strRecordingId, recinfo.iDuration);
 
   // Stop fileOps thread to avoid connection hang
-  if (m_fileOps)
+  if (m_fileOps->IsRunning())
   {
-    delete m_fileOps;
-    m_fileOps = NULL;
+    m_fileOps->StopThread();
   }
     
   CStdString id = recinfo.strRecordingId;
@@ -1445,9 +1443,9 @@ bool PVRClientMythTV::OpenRecordedStream(const PVR_RECORDING &recinfo)
     m_pEventHandler->SetRecordingListener(id, m_file);
 
   // Restart fileOps
-  if (!m_file.IsNull() && !m_fileOps)
+  if (m_file.IsNull() && m_fileOps->IsStopped())
   {
-    m_fileOps = new FileOps(m_con);
+    m_fileOps->Clear();
   }
 
   if (g_bExtraDebug)
@@ -1464,9 +1462,9 @@ void PVRClientMythTV::CloseRecordedStream()
   m_file = MythFile();
 
   // Restart fileOps
-  if (!m_fileOps)
+  if (m_fileOps->IsStopped())
   {
-    m_fileOps = new FileOps(m_con);
+    m_fileOps->Clear();
   }
 
   if (g_bExtraDebug)
