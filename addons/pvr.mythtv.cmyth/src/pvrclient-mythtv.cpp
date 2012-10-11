@@ -1244,7 +1244,8 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
   if (m_rec.IsNull())
   {
     // Suspend fileOps to avoid connection hang
-    m_fileOps->Suspend();
+    if (m_fileOps->IsRunning())
+      m_fileOps->Suspend();
 
     MythChannel chan = m_channels.at(channel.iUniqueId);
     for (std::vector<int>::iterator it = m_sources.at(chan.SourceID()).begin(); it != m_sources.at(chan.SourceID()).end(); it++)
