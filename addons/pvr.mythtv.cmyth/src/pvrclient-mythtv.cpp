@@ -1287,7 +1287,7 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
 }
 
 
-void PVRClientMythTV::CloseLiveStream(bool bNoResume)
+void PVRClientMythTV::CloseLiveStream()
 {
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s", __FUNCTION__);
@@ -1307,8 +1307,32 @@ void PVRClientMythTV::CloseLiveStream(bool bNoResume)
   }
 
   // Resume fileOps
-  if (!bNoResume)
-    m_fileOps->Resume();
+  m_fileOps->Resume();
+
+  if (g_bExtraDebug)
+    XBMC->Log(LOG_DEBUG, "%s - Done", __FUNCTION__);
+
+  return;
+}
+
+void PVRClientMythTV::CloseLiveStreamForReopening()
+{
+  if (g_bExtraDebug)
+    XBMC->Log(LOG_DEBUG, "%s", __FUNCTION__);
+
+  CLockObject lock(m_lock);
+
+  if (m_pEventHandler)
+    m_pEventHandler->PreventLiveChainUpdate();
+
+  m_rec.Stop();
+  m_rec = MythRecorder();
+
+  if (m_pEventHandler)
+  {
+    m_pEventHandler->SetRecorder(m_rec);
+    m_pEventHandler->AllowLiveChainUpdate();
+  }
 
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - Done", __FUNCTION__);
@@ -1355,7 +1379,7 @@ bool PVRClientMythTV::SwitchChannel(const PVR_CHANNEL &channelinfo)
 
   bool retval = false;
 
-  CloseLiveStream(true);
+  CloseLiveStreamForReopening();
   retval = OpenLiveStream(channelinfo);
 
   if (!retval)
