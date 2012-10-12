@@ -1533,8 +1533,7 @@ void PVRClientMythTV::CloseRecordedStream()
 int PVRClientMythTV::ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize)
 {
   if (g_bExtraDebug)
-    XBMC->Log(LOG_DEBUG,"%s - size: %i curPos: %lld",
-	      __FUNCTION__, iBufferSize, (long long)m_file.Position());
+    XBMC->Log(LOG_DEBUG,"%s - size: %i curPos: %lld", __FUNCTION__, iBufferSize, (long long)m_file.Position());
 
   int dataread = m_file.Read(pBuffer, iBufferSize);
   if (g_bExtraDebug)
