@@ -851,7 +851,9 @@ int PVRClientMythTV::GetRecordingLastPlayedPosition(const PVR_RECORDING &recordi
   boost::unordered_map<CStdString, MythProgramInfo>::iterator it = m_recordings.find(recording.strRecordingId);
   if (it != m_recordings.end())
   {
-    long long frameOffset = m_con.GetBookmark(it->second); // returns 0 if no bookmark was found
+    MythProgramInfo proginfo = it->second;
+    long long frameOffset = m_con.GetBookmark(proginfo); // returns 0 if no bookmark was found
+    proginfo = NULL;
     if (frameOffset > 0)
     {
       if (g_bExtraDebug)
