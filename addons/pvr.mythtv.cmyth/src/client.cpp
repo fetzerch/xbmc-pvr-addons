@@ -441,6 +441,12 @@ PVR_ERROR CallMenuHook(const PVR_MENUHOOK &menuhook)
   return g_client->CallMenuHook(menuhook);
 }
 
+void PauseStream(bool bPaused) { (void)bPaused; }
+
+bool CanPauseStream(void) { return true; }
+
+bool CanSeekStream(void) { return true; }
+
 /*******************************************/
 /** PVR EPG Functions                     **/
 
@@ -778,8 +784,5 @@ void DemuxAbort() {}
 void DemuxReset() {}
 void DemuxFlush() {}
 const char * GetLiveStreamURL(const PVR_CHANNEL &) { return ""; }
-void PauseStream(bool bPaused) { (void)bPaused; }
-bool CanPauseStream(void) { return false; }
-bool CanSeekStream(void) { return false; }
 
 } //end extern "C"
