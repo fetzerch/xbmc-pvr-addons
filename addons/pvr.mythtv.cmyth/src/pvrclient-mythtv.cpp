@@ -812,7 +812,9 @@ PVR_ERROR PVRClientMythTV::SetRecordingLastPlayedPosition(const PVR_RECORDING &r
     }
 
     // Write the bookmark
-    int retval = m_con.SetBookmark(it->second, frameOffset);
+    MythProgramInfo proginfo = it->second;
+    int retval = m_con.SetBookmark(proginfo, frameOffset);
+    proginfo = NULL;
     if (retval == 1)
     {
       if (g_bExtraDebug)
