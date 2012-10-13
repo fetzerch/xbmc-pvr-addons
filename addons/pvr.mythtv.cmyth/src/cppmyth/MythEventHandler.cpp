@@ -91,6 +91,7 @@ MythEventHandler::MythEventHandlerPrivate::MythEventHandlerPrivate(const CStdStr
   , m_signal()
 {
   *m_conn_t = cmyth_conn_connect_event(const_cast<char*>(m_server.c_str()), port, 64 * 1024, 16 * 1024);
+  m_playback = false; // Playback is off
 }
 
 MythEventHandler::MythEventHandlerPrivate::~MythEventHandlerPrivate()
