@@ -620,8 +620,8 @@ PVR_ERROR PVRClientMythTV::SetRecordingLastPlayedPosition(const PVR_RECORDING &r
     }
 
     // Write the bookmark
-    int retval = m_con.SetBookmark(it->second, frameOffset);
-    if (retval == 1)
+    bool retval = m_con.SetBookmark(it->second, frameOffset);
+    if (retval)
     {
       if (g_bExtraDebug)
       {
@@ -899,38 +899,41 @@ PVR_ERROR PVRClientMythTV::AddTimer(const PVR_TIMER &timer)
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s - Done - %i", __FUNCTION__, id);
 
+  //Completion of the scheduling run can be found by waiting for a SCHEDULE_CHANGE event.
   //PVR->TriggerTimerUpdate();
   return PVR_ERROR_NO_ERROR;
 }
 
 PVR_ERROR PVRClientMythTV::DeleteTimer(const PVR_TIMER &timer, bool bForceDelete)
 {
-  //if(g_bExtraDebug)
-  //  XBMC->Log(LOG_DEBUG,"%s - title: %s, start: %i, end: %i, chanID: %i, ID: %i",__FUNCTION__,timer.strTitle,timer.startTime,timer.iClientChannelUid,timer.iClientIndex);
-  //std::map< int, MythTimer > timers=m_db.GetTimers();
-  //RecordingRule r = m_recordingRules[(timer.iClientIndex)>>16]; 
-  //if(r.GetParent())
-  //  r = *r.GetParent();
-  //if(r.Type()!=MythTimer::FindOneRecord && r.Type()!=MythTimer::SingleRecord)
-  //{
-  //  CStdString line0;
-  //  line0.Format(XBMC->GetLocalizedString(30008)/*"This will delete the recording rule and \nan additional %i timer(s)."*/,r.size()-1);
-  //  if(!(GUI->Dialog_showYesNo(XBMC->GetLocalizedString(19060)/*"Delete Timer"*/,line0,"",XBMC->GetLocalizedString(30007)/*"Do you still want to delete?"*/,NULL,NULL,NULL)))
-  //    return PVR_ERROR_NO_ERROR; 
-  //}
-  ////delete related Override and Don't Record timers
-  //std::vector<RecordingRule* > modifiers = r.GetModifiers();
-  //for(std::vector <RecordingRule* >::iterator it = modifiers.begin(); it != modifiers.end(); it++)
-  //  m_db.DeleteTimer((*it)->RecordID());
-  //if(!m_db.DeleteTimer(r.RecordID()))
-  //  return PVR_ERROR_FAILED;
-  //m_con.UpdateSchedules(-1);
-  //if(g_bExtraDebug)
-  //  XBMC->Log(LOG_DEBUG,"%s - Done",__FUNCTION__);
-  //return PVR_ERROR_NO_ERROR;
-  (void) timer;
-  (void) bForceDelete;
-  return PVR_ERROR_FAILED;
+  if(g_bExtraDebug)
+    XBMC->Log(LOG_DEBUG,"%s - title: %s, start: %i, end: %i, chanID: %i",__FUNCTION__,timer.strTitle,timer.startTime,timer.iClientChannelUid);
+  /*
+  RecordingRule r = m_recordingRules[(timer.iClientIndex) >> 16];
+  if(!m_db.DeleteTimer(r.RecordID()))
+    return PVR_ERROR_FAILED;
+  m_con.UpdateSchedules(-1);
+  */
+  std::map< int, MythTimer > timers=m_db.GetTimers();
+  RecordingRule r = m_recordingRules[(timer.iClientIndex)>>16];
+  if(r.GetParent())
+    r = *r.GetParent();
+  //delete related Override and Don't Record timers
+  std::vector<RecordingRule* > modifiers = r.GetModifiers();
+  for(std::vector <RecordingRule* >::iterator it = modifiers.begin(); it != modifiers.end(); it++)
+    m_db.DeleteTimer((*it)->RecordID());
+
+  if(!m_db.DeleteTimer(r.RecordID()))
+    return PVR_ERROR_FAILED;
+
+  m_con.UpdateSchedules(-1);
+
+  if(g_bExtraDebug)
+    XBMC->Log(LOG_DEBUG,"%s - Done",__FUNCTION__);
+
+  PVR->TriggerTimerUpdate();
+  (void)bForceDelete;
+  return PVR_ERROR_NO_ERROR;
 }
 
 void PVRClientMythTV::PVRtoMythTimer(const PVR_TIMER timer, MythTimer &mt)
