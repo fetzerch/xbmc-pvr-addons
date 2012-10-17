@@ -1658,7 +1658,7 @@ cmyth_mysql_add_timer(cmyth_database_t db, int chanid,char* callsign, char* desc
 	int ret = -1;
 	int id=0;
 	MYSQL* sql=cmyth_db_get_connection(db);
-	const char *query_str = "INSERT INTO record (record.type, chanid, starttime, startdate, endtime, enddate,title, description, category, findid, findtime, station, subtitle , recpriority , startoffset , endoffset , search , inactive,   dupmethod,	dupin, recgroup, storagegroup, playgroup, autotranscode, autouserjob1, autouserjob2, autouserjob3, autouserjob4, autocommflag, autoexpire, maxepisodes, maxnewest, transcoder) VALUES (? , ? , TIME(FROM_UNIXTIME( ? )), DATE(FROM_UNIXTIME( ? )) , TIME(FROM_UNIXTIME( ? )), DATE(FROM_UNIXTIME( ? ))  , ? , ?, ?, TO_DAYS(DATE(FROM_UNIXTIME( ? ))), TIME(FROM_UNIXTIME( ? )) , ?, ?, ?, ?, ?, ?, ?     ,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?, ?, ?, ?);";
+	const char *query_str = "INSERT INTO record (record.type, chanid, starttime, startdate, endtime, enddate,title, description, category, findday, findtime, station, subtitle , recpriority , startoffset , endoffset , search , inactive,   dupmethod,	dupin, recgroup, storagegroup, playgroup, autotranscode, autouserjob1, autouserjob2, autouserjob3, autouserjob4, autocommflag, autoexpire, maxepisodes, maxnewest, transcoder) VALUES (? , ? , TIME(FROM_UNIXTIME( ? )), DATE(FROM_UNIXTIME( ? )) , TIME(FROM_UNIXTIME( ? )), DATE(FROM_UNIXTIME( ? ))  , ? , ?, ?, TO_DAYS(DATE(FROM_UNIXTIME( ? ))), TIME(FROM_UNIXTIME( ? )) , ?, ?, ?, ?, ?, ?, ?     ,?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,?, ?, ?, ?);";
 
 	char* esctitle = cmyth_mysql_escape_chars(db,title);
 	char* escdescription = cmyth_mysql_escape_chars(db,description);
