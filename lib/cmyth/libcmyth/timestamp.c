@@ -31,6 +31,71 @@
 #include <cmyth_local.h>
 
 /*
+ * cmyth_timestamp_tz_diff(void)
+ *
+ * Scope: PUBLIC
+ *
+ * Description
+ *
+ * Compute the diff between system zone and UTC zone
+ *
+ * Return Value: (time_t) seconds
+ *
+ */
+time_t
+cmyth_timestamp_tz_diff(void)
+{
+	time_t diff;
+
+	time_t st;
+	time_t dt;
+	struct tm * d_info;
+	
+	time(&st);
+	d_info = localtime(&st);
+	dt = timegm(d_info);
+	diff = dt - st;
+
+	return diff;
+}
+
+/*
+ * cmyth_timestamp_from_tz(time_t t, time_t tz_diff)
+ *
+ * Scope: PUBLIC
+ *
+ * Description
+ *
+ * Convert local timestamp to UTC timestamp
+ *
+ * Return Value: timestamp in UTC zone
+ *
+ */
+time_t
+cmyth_timestamp_from_tz(time_t t, time_t tz_diff)
+{
+	return (t - tz_diff);
+}
+
+/*
+ * cmyth_timestamp_to_tz(time_t t, time_t tz_diff)
+ *
+ * Scope: PUBLIC
+ *
+ * Description
+ *
+ * Convert UTC timestamp to local timestamp
+ *
+ * Return Value: timestamp in local zone
+ *
+ */
+time_t
+cmyth_timestamp_to_tz(time_t t, time_t tz_diff)
+{
+	return (t + tz_diff);
+}
+
+/*
  * cmyth_timestamp_create(void)
  * 
  * Scope: PUBLIC
@@ -439,18 +504,9 @@ cmyth_datetime_to_string(char *str, cmyth_timestamp_t ts)
 	tm_datetime.tm_min = ts->timestamp_minute;
 	tm_datetime.tm_sec = ts->timestamp_second;
 	tm_datetime.tm_isdst = ts->timestamp_isdst;
-	t_datetime = mktime(&tm_datetime);
-	sprintf(str,
-		"%4.4ld-%2.2ld-%2.2ldT%2.2ld:%2.2ld:%2.2ld",
-		ts->timestamp_year,
-		ts->timestamp_month,
-		ts->timestamp_day,
-		ts->timestamp_hour,
-		ts->timestamp_minute,
-		ts->timestamp_second);
-	//cmyth_dbg(CMYTH_DBG_ERROR, "original timestamp string: %s \n",str);
+	t_datetime = mktime(&tm_datetime); 
+	
 	sprintf(str,"%lu",(unsigned long) t_datetime);
-	//cmyth_dbg(CMYTH_DBG_ERROR, "time in seconds: %s \n",str);
 	
 	return 0;
 }
