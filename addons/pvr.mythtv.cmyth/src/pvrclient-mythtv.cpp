@@ -922,7 +922,7 @@ PVR_ERROR PVRClientMythTV::DeleteTimer(const PVR_TIMER &timer, bool bForceDelete
     m_db.DeleteTimer((*it)->RecordID());
 
   if (!m_db.DeleteTimer(recordingRule.RecordID()))
-    return PVR_ERROR_FAILED;
+  return PVR_ERROR_FAILED;
 
   m_con.UpdateSchedules(-1);
 
