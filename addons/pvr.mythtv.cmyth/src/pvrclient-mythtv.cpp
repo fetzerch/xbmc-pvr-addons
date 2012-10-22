@@ -1070,7 +1070,7 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
     for (std::vector<int>::iterator it = m_sources.at(chan.SourceID()).begin(); it != m_sources.at(chan.SourceID()).end(); it++)
     {
       m_rec = m_con.GetRecorder(*it);
-      if (!m_rec.IsRecording() && m_rec.IsTunable(chan))
+      if (m_rec.ID() > 0 && !m_rec.IsRecording() && m_rec.IsTunable(chan))
       {
         if (g_bExtraDebug)
           XBMC->Log(LOG_DEBUG,"%s: Opening new recorder %i", __FUNCTION__, m_rec.ID());
@@ -1123,7 +1123,8 @@ void PVRClientMythTV::CloseLiveStream()
   if (m_pEventHandler)
     m_pEventHandler->PreventLiveChainUpdate();
 
-  m_rec.Stop();
+  if (!m_rec.Stop())
+    XBMC->Log(LOG_NOTICE, "%s - Stop live stream failed", __FUNCTION__);
   m_rec = MythRecorder();
 
   if (m_pEventHandler)
@@ -1186,7 +1187,7 @@ bool PVRClientMythTV::SwitchChannel(const PVR_CHANNEL &channelinfo)
   if (m_pEventHandler)
     m_pEventHandler->PreventLiveChainUpdate();
 
-  m_rec.Stop();
+  retval = m_rec.Stop();
   m_rec = MythRecorder();
 
   if (m_pEventHandler)
@@ -1195,7 +1196,8 @@ bool PVRClientMythTV::SwitchChannel(const PVR_CHANNEL &channelinfo)
     m_pEventHandler->AllowLiveChainUpdate();
   }
   //Try to reopen live stream
-  retval = OpenLiveStream(channelinfo);
+  if (retval)
+    retval = OpenLiveStream(channelinfo);
 
   if (!retval)
   {

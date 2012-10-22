@@ -421,6 +421,15 @@ extern char* cmyth_conn_get_backend_hostname(cmyth_conn_t conn);
  * \retval ref counted string with client hostname
  */
 extern char* cmyth_conn_get_client_hostname(cmyth_conn_t conn);
+
+/**
+ * Issues a run of the re-scheduler
+ * \param conn connection handle
+ * \param recordid or -1 performs a full run
+ * \retval <0 for failure
+ */
+extern int cmyth_conn_reschedule_recordings(cmyth_conn_t conn, int recordid);
+
 /*
  * -----------------------------------------------------------------
  * Event Operations
@@ -664,6 +673,8 @@ extern int cmyth_database_set_name(cmyth_database_t db, char *name);
 
 extern int cmyth_set_watched_status_mysql(cmyth_database_t db, cmyth_proginfo_t prog, int watchedStat);
 
+extern int cmyth_database_setup(cmyth_database_t db);
+
 /*
  * -----------------------------------------------------------------
  * Ring Buffer Operations
@@ -709,6 +720,12 @@ extern char *cmyth_rec_num_string(cmyth_rec_num_t rn);
  * Timestamp Operations
  * -----------------------------------------------------------------
  */
+extern time_t cmyth_timestamp_tz_diff();
+
+extern time_t cmyth_timestamp_from_tz(time_t t, time_t tz_diff);
+
+extern time_t cmyth_timestamp_to_tz(time_t t, time_t tz_diff);
+
 extern cmyth_timestamp_t cmyth_timestamp_create(void);
 
 extern cmyth_timestamp_t cmyth_timestamp_from_string(char *str);
@@ -1158,7 +1175,7 @@ extern cmyth_freespace_t cmyth_freespace_create(void);
  * -------
  */
 extern long long cmyth_get_bookmark(cmyth_conn_t conn, cmyth_proginfo_t prog);
-extern int cmyth_get_bookmark_offset(cmyth_database_t db, long chanid, long long mark, char *starttime, int mode);
+extern int cmyth_get_bookmark_offset(cmyth_database_t db, long chanid, long long mark, time_t starttime, int mode);
 extern int cmyth_update_bookmark_setting(cmyth_database_t, cmyth_proginfo_t);
 extern long long cmyth_get_bookmark_mark(cmyth_database_t, cmyth_proginfo_t, long long, int);
 extern int cmyth_set_bookmark(cmyth_conn_t conn, cmyth_proginfo_t prog,
@@ -1212,7 +1229,17 @@ typedef struct cmyth_recgrougs {
 }cmyth_recgroups_t;
 
 extern int cmyth_mysql_get_recgroups(cmyth_database_t, cmyth_recgroups_t **);
+
+/**
+ * Run SQL query from param (backdoor)
+ * \deprecated alternative: cmyth_mysql_delete_timer
+ */
 extern int cmyth_mysql_delete_scheduled_recording(cmyth_database_t db, char * query);
+
+/**
+ * Run SQL query from param (backdoor)
+ * \deprecated alternative: cmyth_mysql_add_timer
+ */
 extern int cmyth_mysql_insert_into_record(cmyth_database_t db, char * query, char * query1, char * query2, char *title, char * subtitle, char * description, char * callsign);
 
 extern char* cmyth_get_recordid_mysql(cmyth_database_t, int, char *, char *, char *, char *, char *);
@@ -1222,9 +1249,15 @@ extern int cmyth_mysql_get_prog_finder_char_title(cmyth_database_t db, cmyth_pro
 extern int cmyth_mysql_get_prog_finder_time(cmyth_database_t db, cmyth_program_t **prog,  time_t starttime, char *program_name);
 extern int cmyth_mysql_get_guide(cmyth_database_t db, cmyth_program_t **prog, time_t starttime, time_t endtime);
 extern int cmyth_mysql_testdb_connection(cmyth_database_t db,char **message);
+
+/**
+ * Send control message from param (backdoor)
+ * \deprecated alternative: cmyth_conn_reschedule_recordings
+ */
 extern int cmyth_schedule_recording(cmyth_conn_t conn, char * msg);
+
 extern char * cmyth_mysql_escape_chars(cmyth_database_t db, char * string);
-extern int cmyth_mysql_get_commbreak_list(cmyth_database_t db, int chanid, char * start_ts_dt, cmyth_commbreaklist_t breaklist, int conn_version);
+extern int cmyth_mysql_get_commbreak_list(cmyth_database_t db, int chanid, time_t start_ts_dt, cmyth_commbreaklist_t breaklist, int conn_version);
 
 extern int cmyth_mysql_get_prev_recorded(cmyth_database_t db, cmyth_program_t **prog);
 
