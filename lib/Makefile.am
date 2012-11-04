@@ -1,8 +1,4 @@
-if ADDON_MYTHTV
-          ADDITIONAL_SUBDIRS = cmyth
-endif
-
-SUBDIRS = libhts tinyxml jsoncpp $(ADDITIONAL_SUBDIRS)
+SUBDIRS = cmyth libhts tinyxml jsoncpp
 
 zip:
 
