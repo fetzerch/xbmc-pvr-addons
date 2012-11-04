@@ -460,9 +460,6 @@ PVR_ERROR PVRClientMythTV::GetRecordings(ADDON_HANDLE handle)
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s", __FUNCTION__);
 
-  if (m_pEventHandler && m_pEventHandler->IsPlaybackActive())
-    return PVR_ERROR_NO_ERROR;
-
   m_recordings = m_con.GetRecordedPrograms();
   for (ProgramInfoMap::iterator it = m_recordings.begin(); it != m_recordings.end(); ++it)
   {
@@ -572,6 +569,7 @@ PVR_ERROR PVRClientMythTV::SetRecordingPlayCount(const PVR_RECORDING &recording,
   if (count > 1) count = 1;
   if (count < 0) count = 0;
 
+  m_con.Lock();
   ProgramInfoMap::iterator it = m_recordings.find(recording.strRecordingId);
   if (it != m_recordings.end())
   {
@@ -581,20 +579,21 @@ PVR_ERROR PVRClientMythTV::SetRecordingPlayCount(const PVR_RECORDING &recording,
     {
       if (g_bExtraDebug)
         XBMC->Log(LOG_DEBUG, "%s - Set watched state for %s", __FUNCTION__, recording.strRecordingId);
+      m_con.Unlock();
       PVR->TriggerRecordingUpdate();
       return PVR_ERROR_NO_ERROR;
     }
     else
     {
       XBMC->Log(LOG_DEBUG, "%s - Failed setting watched state for: %s: %d)", __FUNCTION__, recording.strRecordingId, ret);
-      return PVR_ERROR_FAILED;
     }
   }
   else
   {
-    XBMC->Log(LOG_DEBUG, "%s - Recording %s does not exist", __FUNCTION__, recording.strRecordingId);
-    return PVR_ERROR_FAILED;
+    XBMC->Log(LOG_DEBUG, "%s - Recording %s does not exist", __FUNCTION__, recording.strRecordingId);    
   }
+  m_con.Unlock();
+  return PVR_ERROR_FAILED;
 }
 
 PVR_ERROR PVRClientMythTV::SetRecordingLastPlayedPosition(const PVR_RECORDING &recording, int lastplayedposition)
@@ -608,6 +607,7 @@ PVR_ERROR PVRClientMythTV::SetRecordingLastPlayedPosition(const PVR_RECORDING &r
     XBMC->Log(LOG_DEBUG, "%s - Setting Bookmark for: %s to %d", __FUNCTION__, recording.strTitle, lastplayedposition);
   }
 
+  m_con.Lock();
   ProgramInfoMap::iterator it = m_recordings.find(recording.strRecordingId);
   if (it != m_recordings.end())
   {
@@ -626,6 +626,7 @@ PVR_ERROR PVRClientMythTV::SetRecordingLastPlayedPosition(const PVR_RECORDING &r
       {
         XBMC->Log(LOG_ERROR, "%s - Setting Bookmark successful", __FUNCTION__);
       }
+      m_con.Unlock();
       return PVR_ERROR_NO_ERROR;
     }
     else
@@ -634,14 +635,14 @@ PVR_ERROR PVRClientMythTV::SetRecordingLastPlayedPosition(const PVR_RECORDING &r
       {
         XBMC->Log(LOG_ERROR, "%s - Setting Bookmark failed", __FUNCTION__);
       }
-      return PVR_ERROR_FAILED;
     }
   }
   else
   {
     XBMC->Log(LOG_DEBUG, "%s - Recording %s does not exist", __FUNCTION__, recording.strRecordingId);
-    return PVR_ERROR_FAILED;
   }
+  m_con.Unlock();
+  return PVR_ERROR_FAILED;
 }
 
 int PVRClientMythTV::GetRecordingLastPlayedPosition(const PVR_RECORDING &recording)
@@ -655,6 +656,7 @@ int PVRClientMythTV::GetRecordingLastPlayedPosition(const PVR_RECORDING &recordi
     XBMC->Log(LOG_DEBUG, "%s - Reading Bookmark for: %s", __FUNCTION__, recording.strTitle);
   }
 
+  m_con.Lock();
   ProgramInfoMap::iterator it = m_recordings.find(recording.strRecordingId);
   if (it != m_recordings.end())
   {
@@ -680,12 +682,14 @@ int PVRClientMythTV::GetRecordingLastPlayedPosition(const PVR_RECORDING &recordi
   else
   {
     XBMC->Log(LOG_DEBUG, "%s - Recording %s does not exist", __FUNCTION__, recording.strRecordingId);
+    m_con.Unlock();
     return PVR_ERROR_FAILED;
   }
 
   // Set the bookmark few seconds earlier (due to the accuracy of the above float operations)
   bookmark = bookmark - 3;
   if (bookmark < 0) bookmark = 0;
+  m_con.Unlock();
   return bookmark;
 }
 
