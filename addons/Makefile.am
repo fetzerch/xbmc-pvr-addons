@@ -4,6 +4,7 @@ endif
 
 SUBDIRS = pvr.demo \
           pvr.hts \
+          pvr.mythtv.cmyth \
           pvr.mediaportal.tvserver \
           pvr.nextpvr \
           pvr.vdr.vnsi \
