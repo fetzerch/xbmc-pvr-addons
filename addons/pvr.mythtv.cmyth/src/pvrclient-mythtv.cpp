@@ -571,7 +571,6 @@ PVR_ERROR PVRClientMythTV::SetRecordingPlayCount(const PVR_RECORDING &recording,
 
   m_con.Lock();
   ProgramInfoMap::iterator it = m_recordings.find(recording.strRecordingId);
-  m_con.Unlock();
   if (it != m_recordings.end())
   {
     int ret = m_db.SetWatchedStatus(it->second, count > 0);
@@ -580,20 +579,21 @@ PVR_ERROR PVRClientMythTV::SetRecordingPlayCount(const PVR_RECORDING &recording,
     {
       if (g_bExtraDebug)
         XBMC->Log(LOG_DEBUG, "%s - Set watched state for %s", __FUNCTION__, recording.strRecordingId);
+      m_con.Unlock();
       PVR->TriggerRecordingUpdate();
       return PVR_ERROR_NO_ERROR;
     }
     else
     {
       XBMC->Log(LOG_DEBUG, "%s - Failed setting watched state for: %s: %d)", __FUNCTION__, recording.strRecordingId, ret);
-      return PVR_ERROR_FAILED;
     }
   }
   else
   {
-    XBMC->Log(LOG_DEBUG, "%s - Recording %s does not exist", __FUNCTION__, recording.strRecordingId);
-    return PVR_ERROR_FAILED;
+    XBMC->Log(LOG_DEBUG, "%s - Recording %s does not exist", __FUNCTION__, recording.strRecordingId);    
   }
+  m_con.Unlock();
+  return PVR_ERROR_FAILED;
 }
 
 PVR_ERROR PVRClientMythTV::SetRecordingLastPlayedPosition(const PVR_RECORDING &recording, int lastplayedposition)
