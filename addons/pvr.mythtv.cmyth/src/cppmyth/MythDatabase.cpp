@@ -304,3 +304,10 @@ long long MythDatabase::GetBookmarkMark(const MythProgramInfo &recording, long l
   CMYTH_DB_CALL(mark, mark < 0, cmyth_get_bookmark_mark(*m_database_t, *recording.m_proginfo_t, bk, mode));
   return mark;
 }
+
+long long MythDatabase::GetRecordingMarkup(const MythProgramInfo &recording, int type)
+{
+  long long value = 0;
+  CMYTH_DB_CALL(value, value < 0, cmyth_mysql_get_recording_markup(*m_database_t, *recording.m_proginfo_t, (cmyth_recording_markup_t)type));
+  return value;
+}

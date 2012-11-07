@@ -82,6 +82,8 @@ public:
   int SetWatchedStatus(const MythProgramInfo &recording, bool watched);
   long long GetBookmarkMark(const MythProgramInfo &recording, long long bk, int mode);
 
+  long long GetRecordingMarkup(const MythProgramInfo &recording, int type);
+
 private:
   boost::shared_ptr<MythPointerThreadSafe<cmyth_database_t> > m_database_t;
 };

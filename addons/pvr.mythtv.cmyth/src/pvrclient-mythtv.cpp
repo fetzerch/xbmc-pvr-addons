@@ -700,12 +700,28 @@ float PVRClientMythTV::GetRecordingFrameRate(MythProgramInfo &recording)
 {
   // MythTV uses frame offsets whereas XBMC expects a time offset.
   // This function can be used to convert the frame offsets to time offsets and back.
-  // The average frameRate is calculated by: frameRate = frameCount / duration.
   float frameRate = 0.0f;
 
+  // First try to query the framerate directly
   if (g_bExtraDebug)
   {
     XBMC->Log(LOG_DEBUG, "%s - Getting Framerate for: %s)", __FUNCTION__, recording.Title(false).c_str());
+  }
+
+  long long value = m_db.GetRecordingMarkup(recording, MARK_VIDEO_RATE);
+  if (value > 10000 && value < 80000) {
+    frameRate = (float)value / 1000.0f;
+    if (g_bExtraDebug)
+    {
+      XBMC->Log(LOG_DEBUG, "%s - FrameRate: %f)", __FUNCTION__, frameRate);
+    }
+    return frameRate;
+  }
+
+  // The average frameRate is calculated by: frameRate = frameCount / duration.
+  if (g_bExtraDebug)
+  {
+    XBMC->Log(LOG_DEBUG, "%s - Calculating Framerate, retrieved unplausible FrameRate: %f)", __FUNCTION__, frameRate);
   }
 
   // cmyth_get_bookmark_mark returns the appropriate frame offset for the given byte offset (recordedseek table)
