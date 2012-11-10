@@ -667,6 +667,7 @@ extern int cmyth_database_set_host(cmyth_database_t db, char *host);
 extern int cmyth_database_set_user(cmyth_database_t db, char *user);
 extern int cmyth_database_set_pass(cmyth_database_t db, char *pass);
 extern int cmyth_database_set_name(cmyth_database_t db, char *name);
+extern int cmyth_database_set_port(cmyth_database_t db, unsigned short port);
 
 extern int cmyth_set_watched_status_mysql(cmyth_database_t db, cmyth_proginfo_t prog, int watchedStat);
 
