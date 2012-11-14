@@ -311,3 +311,10 @@ long long MythDatabase::GetRecordingMarkup(const MythProgramInfo &recording, int
   CMYTH_DB_CALL(value, value < 0, cmyth_mysql_get_recording_markup(*m_database_t, *recording.m_proginfo_t, (cmyth_recording_markup_t)type));
   return value;
 }
+
+long long MythDatabase::GetRecordingFrameRate(const MythProgramInfo &recording)
+{
+  long long value = 0;
+  CMYTH_DB_CALL(value, value < 0, cmyth_mysql_get_recording_framerate(*m_database_t, *recording.m_proginfo_t));
+  return value;
+}

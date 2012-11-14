@@ -708,7 +708,7 @@ float PVRClientMythTV::GetRecordingFrameRate(MythProgramInfo &recording)
     XBMC->Log(LOG_DEBUG, "%s - Getting Framerate for: %s)", __FUNCTION__, recording.Title(false).c_str());
   }
 
-  long long value = m_db.GetRecordingMarkup(recording, MARK_VIDEO_RATE);
+  long long value = m_db.GetRecordingFrameRate(recording);
   if (value > 10000 && value < 80000) {
     frameRate = (float)value / 1000.0f;
     if (g_bExtraDebug)
@@ -724,28 +724,6 @@ float PVRClientMythTV::GetRecordingFrameRate(MythProgramInfo &recording)
     XBMC->Log(LOG_DEBUG, "%s - Calculating Framerate, retrieved unplausible FrameRate: %f)", __FUNCTION__, frameRate);
   }
 
-  // cmyth_get_bookmark_mark returns the appropriate frame offset for the given byte offset (recordedseek table)
-  // This can be used to determine the frame count (by querying the max byte offset)
-  long long frameCount = m_db.GetBookmarkMark(recording, LLONG_MAX, 0);
-  if (frameCount > 0)
-  {
-    if (g_bExtraDebug)
-    {
-      XBMC->Log(LOG_DEBUG, "%s - FrameCount: %lld)", __FUNCTION__, frameCount);
-      XBMC->Log(LOG_DEBUG, "%s - Duration: %d)", __FUNCTION__, recording.Duration());
-    }
-
-    if (recording.Duration() > 0)
-    {
-      // Calculate frameRate
-      frameRate = (float)frameCount / (float)recording.Duration();
-
-      if (g_bExtraDebug)
-      {
-        XBMC->Log(LOG_DEBUG, "%s - FrameRate: %f)", __FUNCTION__, frameRate);
-      }
-    }
-  }
   return frameRate;
 }
 
