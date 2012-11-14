@@ -83,6 +83,7 @@ public:
   long long GetBookmarkMark(const MythProgramInfo &recording, long long bk, int mode);
 
   long long GetRecordingMarkup(const MythProgramInfo &recording, int type);
+  long long GetRecordingFrameRate(const MythProgramInfo &recording);
 
 private:
   boost::shared_ptr<MythPointerThreadSafe<cmyth_database_t> > m_database_t;
