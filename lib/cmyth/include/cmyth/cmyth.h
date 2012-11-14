@@ -1365,7 +1365,9 @@ extern char* cmyth_storagegroup_file_get_filename(cmyth_storagegroup_file_t file
 extern unsigned long cmyth_storagegroup_file_get_lastmodified(cmyth_storagegroup_file_t file);
 extern unsigned long long cmyth_storagegroup_file_get_size(cmyth_storagegroup_file_t file);
 
-/* Recording Markups (framerate, ...) */
+/**
+ * \enum king of recording markup
+ */
 typedef enum {
   MARK_UNSET = -10,
   MARK_TMP_CUT_END = -5,
@@ -1394,6 +1396,24 @@ typedef enum {
   MARK_TOTAL_FRAMES = 34
 } cmyth_recording_markup_t;
 
+/**
+ * Retrieve data for a kind of recording markup
+ * \param db
+ * \param prog program info
+ * \param type kind of markup
+ * \retval >=0 markup data
+ * \retval <0 error
+ */
 extern long long cmyth_mysql_get_recording_markup(cmyth_database_t db, cmyth_proginfo_t prog, cmyth_recording_markup_t type);
+
+/**
+ * Retrieve recording framerate (fps x 1000)
+ * \param db
+ * \param prog program info
+ * \ratval >0 recording framerate
+ * \retval =0 invalid framerate
+ * \retval <0 error
+ */
+extern long long cmyth_mysql_get_recording_framerate(cmyth_database_t db, cmyth_proginfo_t prog);
 
 #endif /* __CMYTH_H */
