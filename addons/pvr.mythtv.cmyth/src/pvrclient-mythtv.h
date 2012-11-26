@@ -28,8 +28,8 @@
 class RecordingRule : public MythRecordingRule, public std::vector<std::pair<PVR_TIMER, MythProgramInfo> >
 {
 public:
-  RecordingRule(const MythRecordingRule &timer);
-  RecordingRule& operator=(const MythRecordingRule &timer);
+  RecordingRule(const MythRecordingRule &rule);
+  RecordingRule& operator=(const MythRecordingRule &rule);
   bool operator==(const unsigned long &id);
 
   RecordingRule* GetParent() const;
@@ -150,7 +150,7 @@ private:
 
   // Timers
   RecordingRuleList m_recordingRules;
-  void PVRtoMythRecordingRule(const PVR_TIMER timer, MythRecordingRule &mt);
+  void PVRtoMythRecordingRule(const PVR_TIMER timer, MythRecordingRule &rule);
 
   CStdString GetArtWork(FileOps::FileType storageGroup, const CStdString &shwTitle);
 };
