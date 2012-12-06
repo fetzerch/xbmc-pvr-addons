@@ -928,7 +928,7 @@ void PVRClientMythTV::PVRtoMythRecordingRule(const PVR_TIMER timer, MythRecordin
   rule.SetInactive(timer.state == PVR_TIMER_STATE_ABORTED ||timer.state ==  PVR_TIMER_STATE_CANCELLED);
   rule.SetPriority(timer.iPriority);
   rule.SetStartOffset(timer.iMarginStart);
-  rule.SetStartTime((timer.startTime == 0 ? time(NULL) : timer.startTime));
+  rule.SetStartTime((timer.startTime < 946681200 ? time(NULL) : timer.startTime));
   rule.SetTitle(timer.strTitle, true);
   CStdString title = rule.Title(false);
   // kManualSearch = http://www.gossamer-threads.com/lists/mythtv/dev/155150?search_string=kManualSearch;#155150
