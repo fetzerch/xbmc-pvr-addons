@@ -21,6 +21,8 @@
 
 #include "platform/util/StdString.h"
 
+#include <ctime>
+
 #include <boost/shared_ptr.hpp>
 
 extern "C" {
@@ -30,10 +32,13 @@ extern "C" {
 class MythRecorder;
 class MythSignal;
 class MythFile;
+class MythProgramInfo;
+
+#include "MythProgramInfo.h"
 
 template <class T> class MythPointer;
 
-class MythEventHandler 
+class MythEventHandler
 {
 public:
   MythEventHandler();
@@ -51,6 +56,62 @@ public:
   void EnablePlayback();
   void DisablePlayback();
   bool IsPlaybackActive() const;
+
+  //Recordings change events
+  enum RecordingChangeType
+  {
+    CHANGE_ALL = 0,
+    CHANGE_ADD = 1,
+    CHANGE_UPDATE,
+    CHANGE_DELETE
+  };
+
+  class RecordingChangeEvent
+  {
+  public:
+    RecordingChangeEvent(RecordingChangeType type, int chanid, char *recstartts)
+      : m_type(type)
+      , m_chanid(chanid)
+      , m_recstartts(0)
+    {
+      if (recstartts) {
+        MythTimestamp time(recstartts, false);
+        m_recstartts = time.UnixTime();
+      }
+    }
+
+    RecordingChangeEvent(RecordingChangeType type, const MythProgramInfo &prog)
+      : m_type(type)
+      , m_chanid(0)
+      , m_recstartts(0)
+      , m_prog(prog)
+    {
+    }
+
+    RecordingChangeEvent(RecordingChangeType type)
+      : m_type(type)
+      , m_chanid(0)
+      , m_recstartts(0)
+    {
+    }
+
+    RecordingChangeType Type() const { return m_type; }
+    int ChannelID() const { return m_chanid; };
+    time_t RecStartTs() const { return m_recstartts; }
+    MythProgramInfo Program() const { return m_prog; }
+
+  private:
+    RecordingChangeType m_type;
+    // Event ADD or DELETE returns program key
+    int m_chanid; // Channel ID
+    time_t m_recstartts; // Recording start timeslot
+    // Event UPDATE returns updated program info
+    MythProgramInfo m_prog;
+  };
+
+  bool HasRecordingChangeEvent() const;
+  RecordingChangeEvent NextRecordingChangeEvent();
+  void ClearRecordingChangeEvents();
 
 private:
   class MythEventHandlerPrivate; // Needs to be within MythEventHandler to inherit friend permissions
