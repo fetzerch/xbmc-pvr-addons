@@ -235,6 +235,36 @@ ProgramInfoMap MythConnection::GetRecordedPrograms()
   return retval;
 }
 
+MythProgramInfo MythConnection::GetRecordedProgram(const CStdString &basename)
+{
+  MythProgramInfo retval;
+  cmyth_proginfo_t prog = NULL;
+  if (!basename.IsEmpty())
+  {
+    CMYTH_CONN_CALL_REF(prog, prog == NULL, cmyth_proginfo_get_from_basename(*m_conn_t, const_cast<char*>(basename.c_str())));
+    if (prog) {
+      retval = MythProgramInfo(prog);
+    }
+  }
+
+  return retval;
+}
+
+MythProgramInfo MythConnection::GetRecordedProgramFromTs(int chanid, time_t recstartts)
+{
+  MythProgramInfo retval;
+  cmyth_proginfo_t prog = NULL;
+  if (chanid > 0 && recstartts > 0)
+  {
+    CMYTH_CONN_CALL_REF(prog, prog == NULL, cmyth_proginfo_get_from_timeslot(*m_conn_t, chanid, recstartts));
+    if (prog) {
+      retval = MythProgramInfo(prog);
+    }
+  }
+
+  return retval;
+}
+
 ProgramInfoMap MythConnection::GetPendingPrograms()
 {
   Lock();
@@ -308,26 +338,11 @@ bool MythConnection::StopRecording(const MythProgramInfo &recording)
   return (retval == 0);
 }
 
-StorageGroupFileList MythConnection::GetStorageGroupFileList(const CStdString &storageGroup)
+MythStorageGroupFile MythConnection::GetStorageGroupFile(const CStdString &storageGroup, const CStdString &filename)
 {
-  cmyth_storagegroup_filelist_t filelist = NULL;
-  CMYTH_CONN_CALL_REF(filelist, filelist == NULL, cmyth_storagegroup_get_filelist(*m_conn_t, const_cast<char*>(storageGroup.c_str()), const_cast<char*>(GetBackendHostname().c_str())));
-
-  Lock();
-
-  int len = cmyth_storagegroup_filelist_count(filelist);
-  StorageGroupFileList retval;
-  retval.reserve(len);
-  for (int i = 0; i < len; i++)
-  {
-    cmyth_storagegroup_file_t file = cmyth_storagegroup_filelist_get_item(filelist, i);
-    retval.push_back(MythStorageGroupFile(file));
-  }
-  ref_release(filelist);
-
-  Unlock();
-
-  return retval;
+  cmyth_storagegroup_file_t file = NULL;
+  CMYTH_CONN_CALL_REF(file, file == NULL, cmyth_storagegroup_get_fileinfo(*m_conn_t, const_cast<char*>(storageGroup.c_str()), const_cast<char*>(GetBackendHostname().c_str()), const_cast<char*>(filename.c_str())));
+  return MythStorageGroupFile(file);
 }
 
 MythFile MythConnection::ConnectFile(MythProgramInfo &recording)
