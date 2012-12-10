@@ -2066,6 +2066,18 @@ extern int cmyth_mysql_get_recprofiles(cmyth_database_t db, cmyth_recprofile_t *
  */
 extern int cmyth_mysql_get_playgroups(cmyth_database_t db, char** *pg);
 
+/**
+ * Retrieves no host setting from database.
+ * Before forgetting the reference to data
+ * the caller must call ref_release().
+ * \param db
+ * \param setting name of the no host setting
+ * \param data setting data handle
+ * \return success: 0 not available, 1 available
+ * \return failure: -1
+ */
+extern int cmyth_mysql_get_nohost_setting(cmyth_database_t db, char *setting, char **data);
+
 /*
  * -----------------------------------------------------------------
  * Recording Markup and associated infos
