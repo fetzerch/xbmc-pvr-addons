@@ -77,6 +77,22 @@ int MythDatabase::GetSchemaVersion()
   return retval;
 }
 
+CStdString MythDatabase::GetNoHostSetting(const CStdString &setting)
+{
+  int retval;
+  char* buf;
+  CStdString data;
+  CMYTH_DB_CALL(retval, retval < 0, cmyth_mysql_get_nohost_setting(*m_database_t, const_cast<char*>(setting.c_str()), &buf));
+  if (retval > 0)
+  {
+    data = CStdString(buf);
+    ref_release(buf);
+  }
+  else
+    data = "";
+  return data;
+}
+
 bool MythDatabase::FindProgram(time_t starttime, int channelid, const CStdString &title, MythProgram* program)
 {
   int retval = 0;
