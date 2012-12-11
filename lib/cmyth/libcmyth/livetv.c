@@ -449,8 +449,6 @@ cmyth_livetv_chain_update(cmyth_recorder_t rec, char * chainid)
 		return -1;
 	}
 
-	pthread_mutex_lock(&mutex);
-
 	if (strncmp(rec->rec_livetv_chain->chainid, chainid, strlen(chainid)) == 0) {
 		sprintf(url, "myth://%s:%d%s", loc_prog->proginfo_hostname, rec->rec_port,
 				loc_prog->proginfo_pathname);
@@ -501,7 +499,6 @@ cmyth_livetv_chain_update(cmyth_recorder_t rec, char * chainid)
 	}
 
 out:
-	pthread_mutex_unlock(&mutex);
 	ref_release(ft);
 	ref_release(loc_prog);
 
@@ -613,12 +610,10 @@ cmyth_livetv_done_recording(cmyth_recorder_t rec, char * msg)
 			&& cmyth_recorder_is_recording(rec) == 1)
 		{
 			/*
-			 * Last recording is now completed. Then switch ON watch status
-			 * and force live tv chain update for the new current program.
+			 * Last recording is now completed.
+			 * Then force live tv chain update for the new current
+			 * program and switch ON watch status.
 			 */
-			pthread_mutex_lock(&mutex);
-			rec->rec_livetv_chain->livetv_watch = 1;
-			pthread_mutex_unlock(&mutex);
 			cmyth_dbg(CMYTH_DBG_DEBUG,
 				  "%s: previous recording done. Start chain update\n",
 				  __FUNCTION__);
@@ -631,6 +626,9 @@ cmyth_livetv_done_recording(cmyth_recorder_t rec, char * msg)
 					  __FUNCTION__, rec_id);
 				ret = -1;
 			}
+			pthread_mutex_lock(&mutex);
+			rec->rec_livetv_chain->livetv_watch = 1;
+			pthread_mutex_unlock(&mutex);
 		}
 		else {
 			cmyth_dbg(CMYTH_DBG_DEBUG,
@@ -692,8 +690,6 @@ cmyth_livetv_chain_setup(cmyth_recorder_t rec, int tcp_rcvbuf,
 			  __FUNCTION__);
 		goto out;
 	}
-
-	pthread_mutex_lock(&mutex);
 
 	new_rec = cmyth_recorder_dup(rec);
 	if (new_rec == NULL) {
@@ -758,7 +754,6 @@ cmyth_livetv_chain_setup(cmyth_recorder_t rec, int tcp_rcvbuf,
 	}
 
     out:
-	pthread_mutex_unlock(&mutex);
 	ref_release(ft);
 	ref_release(loc_prog);
 
@@ -848,9 +843,7 @@ cmyth_livetv_chain_switch(cmyth_recorder_t rec, int dir)
 				  "%s: wait until livetv_watch is up\n",
 				  __FUNCTION__);
 			for (i = 0; i < 4; i++) {
-				pthread_mutex_unlock(&mutex);
 				usleep(500000);
-				pthread_mutex_lock(&mutex);
 				if (rec->rec_livetv_chain->livetv_watch == 1)
 					break;
 			}
@@ -858,7 +851,8 @@ cmyth_livetv_chain_switch(cmyth_recorder_t rec, int dir)
 				/* The chain is not updated yet
 				 * Return to retry later
 				 */
-				return 0;
+				ret = 0;
+				goto out;
 			}
 		}
 	}
@@ -877,10 +871,10 @@ cmyth_livetv_chain_switch(cmyth_recorder_t rec, int dir)
 		ret = 1;
 	}
 
+	out:
 	return ret;
 }
 
-/* for calls from other modules where the mutex isn't set */
 int
 cmyth_livetv_chain_switch_last(cmyth_recorder_t rec)
 {
@@ -901,7 +895,6 @@ cmyth_livetv_chain_switch_last(cmyth_recorder_t rec)
 	if(rec->rec_conn->conn_version < 26)
 		return 1;
 
-	pthread_mutex_lock(&mutex);
 	dir = rec->rec_livetv_chain->chain_ct
 			- rec->rec_livetv_chain->chain_current - 1;
 	if(dir != 0) {
@@ -910,7 +903,6 @@ cmyth_livetv_chain_switch_last(cmyth_recorder_t rec)
 	else {
 		rec->rec_livetv_chain->chain_switch_on_create=1;
 	}
-	pthread_mutex_unlock(&mutex);
 	return 1;
 }
 
@@ -944,8 +936,6 @@ cmyth_livetv_chain_request_block(cmyth_recorder_t rec, unsigned long len)
 		return -EINVAL;
 	}
 
-	pthread_mutex_lock(&mutex);
-
 	do {
 		retry = 0;
 		ret = cmyth_file_request_block(rec->rec_livetv_file, len);
@@ -955,8 +945,6 @@ cmyth_livetv_chain_request_block(cmyth_recorder_t rec, unsigned long len)
 		}
 	}
 	while (retry);
-
-	pthread_mutex_unlock(&mutex);
 
 	cmyth_dbg(CMYTH_DBG_DEBUG, "%s [%s:%d]: (trace) }\n",
 				__FUNCTION__, __FILE__, __LINE__);
@@ -999,10 +987,7 @@ int cmyth_livetv_chain_read(cmyth_recorder_t rec, char *buf, unsigned long len)
 		nlen = (unsigned long)ret;
 		if (nlen == 0) {
 			/* eof, switch to next file */
-			pthread_mutex_lock(&mutex);
 			retry = cmyth_livetv_chain_switch(rec, 1);
-			pthread_mutex_unlock(&mutex);
-
 			if (retry == 1) {
 				/* Chain switch done. Retry without limit */
 				vlen = 0;
@@ -1163,10 +1148,8 @@ cmyth_livetv_chain_seek(cmyth_recorder_t rec, long long offset, int whence)
 	if (fp && cur >=0)
 	{
 		if ((ret = cmyth_file_seek(fp, offset, whence)) >= 0) {
-			pthread_mutex_lock(&mutex);
 			cur -= rec->rec_livetv_chain->chain_current;
 			cmyth_livetv_chain_switch(rec, cur);
-			pthread_mutex_unlock(&mutex);
 		}
 	}
 	else
