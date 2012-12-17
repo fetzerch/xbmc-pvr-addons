@@ -1298,6 +1298,8 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
     m_fileOps->Resume();
 
     XBMC->Log(LOG_ERROR,"%s - Failed to open live stream", __FUNCTION__);
+    // Notify 'Channel unavailable'
+    XBMC->QueueNotification(QUEUE_WARNING, XBMC->GetLocalizedString(30302));
 
     return false;
   }
