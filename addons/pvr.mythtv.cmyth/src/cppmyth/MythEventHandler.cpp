@@ -255,7 +255,7 @@ void *MythEventHandler::MythEventHandlerPrivate::Process()
           m_recordingChangeEventList.push_back(RecordingChangeEvent(CHANGE_UPDATE, prog));
           Unlock();
           if (g_bExtraDebug)
-            XBMC->Log(LOG_DEBUG,"%s - Event recording list update: UID=%s", __FUNCTION__, prog.StrUID().c_str());
+            XBMC->Log(LOG_DEBUG,"%s - Event recording list update: UID=%s", __FUNCTION__, prog.UID().c_str());
           recordingChange = true;
         }
       }
@@ -402,22 +402,26 @@ void MythEventHandler::MythEventHandlerPrivate::HandleUpdateFileSize(const CStdS
 
 void MythEventHandler::MythEventHandlerPrivate::RetryConnect()
 {
-    while (!IsStopped())
-    {
-      usleep(999999);
-      ref_release(*m_conn_t);
-      *m_conn_t = NULL;
-      *m_conn_t = cmyth_conn_connect_event(const_cast<char*>(m_server.c_str()), m_port, 64 * 1024, 16 * 1024);
+  //Notify 'MythTV backend service unavailable'
+  XBMC->QueueNotification(QUEUE_ERROR, XBMC->GetLocalizedString(30303));
+  while (!IsStopped())
+  {
+    usleep(999999);
+    ref_release(*m_conn_t);
+    *m_conn_t = NULL;
+    *m_conn_t = cmyth_conn_connect_event(const_cast<char*>(m_server.c_str()), m_port, 64 * 1024, 16 * 1024);
 
-      if (*m_conn_t == NULL)
-        XBMC->Log(LOG_NOTICE, "%s - Could not connect client to event socket", __FUNCTION__);
-      else
-      {
-        XBMC->Log(LOG_NOTICE, "%s - Connected client to event socket", __FUNCTION__);
-        RecordingListChange();
-        break;
-      }
+    if (*m_conn_t == NULL)
+      XBMC->Log(LOG_NOTICE, "%s - Could not connect client to event socket", __FUNCTION__);
+    else
+    {
+      XBMC->Log(LOG_NOTICE, "%s - Connected client to event socket", __FUNCTION__);
+      //Notify 'MythTV backend service available'
+      XBMC->QueueNotification(QUEUE_INFO, XBMC->GetLocalizedString(30306));
+      RecordingListChange();
+      break;
     }
+  }
 }
 
 bool MythEventHandler::MythEventHandlerPrivate::TryReconnect()
