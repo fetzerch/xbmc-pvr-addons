@@ -46,19 +46,15 @@ bool MythProgramInfo::IsNull() const
   return *m_proginfo_t == NULL;
 }
 
-CStdString MythProgramInfo::StrUID()
+CStdString MythProgramInfo::UID()
 {
-  return MakeUID(ChannelID(), RecordingStartTime());
-}
+  // Creates unique IDs from ChannelID, StartTime and RecordID like "100_2011-12-10T12:00:00_247"
+  char buf[41] = "";
+  MythTimestamp time(RecordingStartTime());
+  sprintf(buf, "%d_%s_%lu", ChannelID(), time.String().c_str(), RecordID());
+  return CStdString(buf);
 
-long long MythProgramInfo::UID()
-{
-  long long retval = RecordingStartTime();
-  retval <<= 32;
-  retval += ChannelID();
-  if (retval > 0)
-    retval = -retval;
-  return retval;
+  return buf;
 }
 
 CStdString MythProgramInfo::ProgramID()
