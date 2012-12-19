@@ -108,9 +108,10 @@ cmyth_database_setup(cmyth_database_t db)
 			db->db_tz_utc = 0;
 			strcpy(db->db_tz_name,"SYSTEM");
 		}
+		return 1;
 	}
 
-	return 1;
+	return 0;
 }
 
 int
@@ -169,12 +170,28 @@ cmyth_database_set_port(cmyth_database_t db, unsigned short port)
 	return 1;
 }
 
+static int
+cmyth_database_check_version(cmyth_database_t db)
+{
+	int err = 0;
+	/*
+	 * Since version 0.26, mythbackend store in the database an exhaustive list of datetime fields
+	 * using UTC zone, not all. Others fields keep local system time zone. Also the field types don't
+	 * have extension 'with time zone'. To manage this situation we check the DB schema version to
+	 * know if we must manually convert these date, time or datetime fields during exchanges with the
+	 * database (read or store). If true then the attribute db_tz_utc is set to 1 else 0.
+	 * This check is done one time at the first getting connection when the attribute db_version is
+	 * not yet known (-1).
+	 */
+	if (db->db_version < 0 && (err = cmyth_database_setup(db)) < 0)
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: database setup failed (%d)\n", __FUNCTION__, err);
+	return err;
+}
+
 int
 cmyth_database_get_version(cmyth_database_t db)
 {
-	int err;
-	if (db->db_version < 0 && (err = cmyth_database_setup(db)) < 0)
-		cmyth_dbg(CMYTH_DBG_ERROR, "%s: database setup failed (%d)\n", __FUNCTION__, err);
+	cmyth_database_check_version(db);
 	return db->db_version;
 }
 
@@ -213,53 +230,43 @@ cmyth_db_check_connection(cmyth_database_t db)
 MYSQL *
 cmyth_db_get_connection(cmyth_database_t db)
 {
-    int err;
+	int err;
 
-    if(cmyth_db_check_connection(db) != 0)
-    {
-       cmyth_dbg(CMYTH_DBG_ERROR, "%s: cmyth_db_check_connection failed\n",
-       					__FUNCTION__);
-       return NULL;
-    }
+	if(cmyth_db_check_connection(db) != 0)
+	{
+	   cmyth_dbg(CMYTH_DBG_ERROR, "%s: cmyth_db_check_connection failed\n",
+					    __FUNCTION__);
+	   return NULL;
+	}
 
-    /*
-     * mythbackend stores any multi-byte characters using utf8 encoding within latin1 database
-     * columns. The MySQL connection needs to be told to use a utf8 character set when reading the
-     * database columns or any multi-byte characters will be treated as 2 or 3 subsequent latin1
-     * characters with nonsense values.
-     *
-     * http://www.mythtv.org/wiki/Fixing_Corrupt_Database_Encoding#Note_on_MythTV_0.21-fixes_and_below_character_encoding
-     * http://dev.mysql.com/doc/refman/5.0/en/charset-connection.html
-     */
-    if(mysql_query(db->mysql,"SET NAMES utf8;")) {
-      cmyth_dbg(CMYTH_DBG_ERROR, "%s: mysql_query() failed: %s\n", __FUNCTION__, mysql_error(db->mysql));
-      return NULL;
-    }
-    /*
-     * Since version 0.26, mythbackend store in the database an exhaustive list of datetime fields
-     * using UTC zone, not all. Others fields keep local system time zone. Also the field types don't
-     * have extension 'with time zone'. To manage this situation we check the DB schema version to
-     * know if we must manually convert these date, time or datetime fields during exchanges with the
-     * database (read or store). If true then the attribute db_tz_utc is set to 1 else 0.
-     * This check is done one time at the first getting connection when the attribute db_version is
-     * not yet known (-1).
-     */
-    if (db->db_version < 0 && (err=cmyth_database_setup(db)) < 0) {
-            cmyth_dbg(CMYTH_DBG_ERROR, "%s: database setup failed (%d)\n",
-                    __FUNCTION__, err);
-            return NULL;
-    }
-    /*
-     * Setting the TIME_ZONE is not really required since all datetime fields don't have extension
-     * 'with time zone'. But we do even.
-     */
-    if(mysql_query(db->mysql,"SET TIME_ZONE='SYSTEM';")) {
-            cmyth_dbg(CMYTH_DBG_ERROR, "%s: SET TIME_ZONE failed: %s\n",
-                    __FUNCTION__, mysql_error(db->mysql));
-            return NULL;
-    }
+	/*
+	 * mythbackend stores any multi-byte characters using utf8 encoding within latin1 database
+	 * columns. The MySQL connection needs to be told to use a utf8 character set when reading the
+	 * database columns or any multi-byte characters will be treated as 2 or 3 subsequent latin1
+	 * characters with nonsense values.
+	 *
+	 * http://www.mythtv.org/wiki/Fixing_Corrupt_Database_Encoding#Note_on_MythTV_0.21-fixes_and_below_character_encoding
+	 * http://dev.mysql.com/doc/refman/5.0/en/charset-connection.html
+	 */
+	if(mysql_query(db->mysql,"SET NAMES utf8;")) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: mysql_query() failed: %s\n", __FUNCTION__, mysql_error(db->mysql));
+		return NULL;
+	}
+	/*
+	 * TODO: DB version should be checked in caller
+	 */
+	if ((err = cmyth_database_check_version(db)) < 0)
+		return NULL;
+	/*
+	 * Setting the TIME_ZONE is not really required since all datetime fields don't have extension
+	 * 'with time zone'. But we do even.
+	 */
+	if(mysql_query(db->mysql,"SET TIME_ZONE='SYSTEM';")) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: SET TIME_ZONE failed: %s\n", __FUNCTION__, mysql_error(db->mysql));
+		return NULL;
+	}
 
-    return db->mysql;
+	return db->mysql;
 }
 
 char *
@@ -1505,6 +1512,64 @@ cmyth_mysql_get_recorder_source_list(cmyth_database_t db, cmyth_recorder_source_
 
 	res = cmyth_mysql_query_result(query);
 	ref_release(query);
+	if(res == NULL)
+	{
+		cmyth_dbg(CMYTH_DBG_ERROR,"%s, finalisation/execution of query failed!\n", __FUNCTION__);
+		return 0;
+	}
+
+	ret = ref_alloc( sizeof( cmyth_recorder_source_t ) * (int)mysql_num_rows(res));
+
+	if (!ret) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: alloc() failed for list\n", __FUNCTION__);
+		mysql_free_result(res);
+		return -1;
+	}
+
+	while ((row = mysql_fetch_row(res))) {
+		ret[rows].recid = safe_atol(row[0]);
+		ret[rows].sourceid = safe_atol(row[1]);
+		rows++;
+	}
+
+	mysql_free_result(res);
+	cmyth_dbg(CMYTH_DBG_DEBUG, "%s: rows= %d\n", __FUNCTION__, rows);
+
+	*rsrc = ret;
+	return rows;
+}
+
+int
+cmyth_mysql_get_recorder_source_channum(cmyth_database_t db, char *channum, cmyth_recorder_source_t **rsrc)
+{
+	MYSQL_RES *res = NULL;
+	MYSQL_ROW row;
+	const char *query_str1 = "SELECT cardinput.cardid, cardinput.sourceid FROM channel INNER JOIN cardinput ON channel.sourceid = cardinput.sourceid WHERE channel.channum = ? ORDER BY cardinput.cardinputid";
+	const char *query_str2 = "SELECT cardinput.cardid, cardinput.sourceid FROM channel INNER JOIN cardinput ON channel.sourceid = cardinput.sourceid WHERE channel.channum = ? AND cardinput.livetvorder > 0 ORDER BY cardinput.livetvorder, cardinput.cardinputid";
+	int rows = 0;
+	cmyth_recorder_source_t *ret;
+
+	char* escchan = cmyth_mysql_escape_chars(db, channum);
+	cmyth_mysql_query_t * query;
+
+	if (cmyth_database_check_version(db) < 0)
+		return -1;
+	//DB version change at mythtv/libs/libmythtv/dbcheck.cpp:1789
+	if (db->db_version < 1293)
+		query = cmyth_mysql_query_create(db, query_str1);
+	else
+		query = cmyth_mysql_query_create(db, query_str2);
+
+	if (cmyth_mysql_query_param_str(query, escchan) < 0) {
+		cmyth_dbg(CMYTH_DBG_ERROR,"%s, binding of query parameters failed! Maybe we're out of memory?\n", __FUNCTION__);
+		ref_release(query);
+		ref_release(escchan);
+		return -1;
+	}
+
+	res = cmyth_mysql_query_result(query);
+	ref_release(query);
+	ref_release(escchan);
 	if(res == NULL)
 	{
 		cmyth_dbg(CMYTH_DBG_ERROR,"%s, finalisation/execution of query failed!\n", __FUNCTION__);
