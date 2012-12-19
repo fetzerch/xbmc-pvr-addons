@@ -43,6 +43,7 @@ typedef std::map<int, MythChannel> ChannelMap;
 typedef std::pair<CStdString, std::vector<int> > MythChannelGroup;
 typedef std::map<CStdString, std::vector<int> > ChannelGroupMap;
 
+typedef std::vector<int> SourceList;
 typedef std::map<int, std::vector<int> > SourceMap;
 typedef std::map<int, MythRecordingRule> RecordingRuleMap;
 
@@ -74,6 +75,7 @@ public:
 
   ChannelMap GetChannels();
   ChannelGroupMap GetChannelGroups();
+  SourceList GetChannelNumberSources(const CStdString &channum);
   SourceMap GetSources();
 
   RecordingRuleMap GetRecordingRules();
