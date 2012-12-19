@@ -158,6 +158,21 @@ ChannelGroupMap MythDatabase::GetChannelGroups()
   return retval;
 }
 
+SourceList MythDatabase::GetChannelNumberSources(const CStdString &channum)
+{
+  SourceList retval;
+  cmyth_recorder_source_t *recorders = 0;
+  int recorderCount = 0;
+  CMYTH_DB_CALL(recorderCount, recorderCount < 0, cmyth_mysql_get_recorder_source_channum(*m_database_t, const_cast<char*>(channum.c_str()), &recorders));
+
+  for (int i = 0; i < recorderCount; i++)
+  {
+    retval.push_back(recorders[i].recid);
+  }
+  ref_release(recorders);
+  return retval;
+}
+
 SourceMap MythDatabase::GetSources()
 {
   SourceMap retval;
