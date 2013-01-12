@@ -273,6 +273,12 @@ void ADDON_Destroy()
   m_CurStatus = ADDON_STATUS_UNKNOWN;
 }
 
+void ADDON_Announce(const char *flag, const char *sender, const char *message, const void *data)
+{
+  (void)data;
+  XBMC->Log(LOG_INFO, "Received announcement: %s, %s, %s", flag, sender, message);
+}
+
 ADDON_STATUS ADDON_GetStatus()
 {
   return m_CurStatus;
