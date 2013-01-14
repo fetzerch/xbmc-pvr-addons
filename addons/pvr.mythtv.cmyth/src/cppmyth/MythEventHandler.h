@@ -44,6 +44,9 @@ public:
   MythEventHandler();
   MythEventHandler(const CStdString &server, unsigned short port);
 
+  void Suspend();
+  void Resume();
+
   void PreventLiveChainUpdate();
   void AllowLiveChainUpdate();
 
@@ -54,6 +57,7 @@ public:
   void EnablePlayback();
   void DisablePlayback();
   bool IsPlaybackActive() const;
+  bool IsListening() const;
 
   //Recordings change events
   enum RecordingChangeType
