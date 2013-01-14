@@ -26,6 +26,7 @@
 #include "MythProgramInfo.h"
 #include "MythTimestamp.h"
 #include "../client.h"
+#include "../network.h"
 
 #include <list>
 
@@ -408,6 +409,10 @@ void MythEventHandler::MythEventHandlerPrivate::RetryConnect()
   m_hang = true;
   while (!IsStopped())
   {
+    // wake up the backend sending magic packet
+    if (!g_szMythHostEther.IsEmpty())
+      Network::WakeOnLan(g_szMythHostEther);
+
     usleep(999999);
     ref_release(*m_conn_t);
     *m_conn_t = NULL;

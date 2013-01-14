@@ -50,6 +50,10 @@ msgctxt "#30007"
 msgid "Allow Live TV to move scheduled shows"
 msgstr ""
 
+msgctxt "#30008"
+msgid "MythTV Backend Ethernet address (WOL)"
+msgstr ""
+
 # Systeminformation labels
 msgctxt "#30100"
 msgid "Protocol version: %i - Database version: %i"

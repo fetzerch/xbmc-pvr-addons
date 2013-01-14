@@ -20,6 +20,7 @@ libmythtvcmyth_addon_la_LDFLAGS = $(MYSQL_LIBS) @TARGET_LDFLAGS@
 libmythtvcmyth_addon_la_SOURCES = src/client.cpp \
                                   src/fileOps.cpp \
                                   src/categories.cpp \
+                                  src/network.cpp \
                                   src/pvrclient-mythtv.cpp \
                                   src/cppmyth/MythChannel.cpp \
                                   src/cppmyth/MythConnection.cpp \

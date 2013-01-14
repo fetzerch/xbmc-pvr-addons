@@ -41,6 +41,7 @@ int          g_iDBPort                = DEFAULT_DB_PORT;          ///< The mytht
 bool         g_bExtraDebug            = DEFAULT_EXTRA_DEBUG;      ///< Output extensive debug information to the log
 bool         g_bLiveTV                = DEFAULT_LIVETV;           ///< LiveTV support (or recordings only)
 bool         g_bLiveTVPriority        = DEFAULT_LIVETV_PRIORITY;  ///< MythTV Backend setting to allow live TV to move scheduled shows
+CStdString   g_szMythHostEther        = "";                       ///< The Host MAC address of the mythtv server
 
 ///* Client member variables */
 bool         m_recordingFirstRead;
@@ -209,6 +210,16 @@ ADDON_STATUS ADDON_Create(void *hdl, void *props)
     XBMC->Log(LOG_ERROR, "Couldn't get 'livetv' setting, falling back to '%b' as default", DEFAULT_LIVETV);
     g_bLiveTV = DEFAULT_LIVETV;
   }
+
+  /* Read setting "host_ether" from settings.xml */
+  if (XBMC->GetSetting("host_ether", buffer))
+    g_szMythHostEther = buffer;
+  else
+  {
+    /* If setting is unknown fallback to defaults */
+    g_szMythHostEther = "";
+  }
+  buffer[0] = 0;
 
   free (buffer);
 

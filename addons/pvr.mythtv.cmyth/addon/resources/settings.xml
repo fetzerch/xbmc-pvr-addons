@@ -10,4 +10,5 @@
   <setting id="extradebug" type="bool" label="30005" default="false" />
   <setting id="livetv" type="bool" label="30006" default="true" />
   <setting id="livetv_priority" type="bool" label="30007" default="false" />
+  <setting id="host_ether" type="text" label="30008" default="" />
 </settings>

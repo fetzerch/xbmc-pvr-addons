@@ -74,6 +74,7 @@ extern int          g_iDBPort;            ///< The mythtv sql database port (def
 extern bool         g_bExtraDebug;        ///< Debug logging
 extern bool         g_bLiveTV;            ///< LiveTV support (or recordings only)
 extern bool         g_bLiveTVPriority;    ///< MythTV Backend setting to allow live TV to move scheduled shows
+extern CStdString   g_szMythHostEther;    ///< The Host MAC address of the mythtv server
 
 extern ADDON::CHelper_libXBMC_addon *XBMC;
 extern CHelper_libXBMC_pvr   *PVR;
