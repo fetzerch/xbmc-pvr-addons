@@ -271,7 +271,7 @@ void PVRClientMythTV::OnSleep()
 void PVRClientMythTV::OnWake()
 {
   if (m_pEventHandler)
-    m_pEventHandler->Resume();
+    m_pEventHandler->Resume(true);
   if (m_fileOps)
     m_fileOps->Resume();
 }
