@@ -65,6 +65,7 @@ public:
   const char *GetBackendVersion();
   const char *GetConnectionString();
   bool GetDriveSpace(long long *iTotal, long long *iUsed);
+  bool IsBackendEventOK(bool notify = false);
 
   // EPG
   PVR_ERROR GetEPGForChannel(ADDON_HANDLE handle, const PVR_CHANNEL &channel, time_t iStart, time_t iEnd);
