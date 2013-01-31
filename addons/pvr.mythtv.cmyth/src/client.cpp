@@ -228,7 +228,7 @@ ADDON_STATUS ADDON_Create(void *hdl, void *props)
     g_iRecTemplateType = DEFAULT_RECORD_TEMPLATE;
   }
   /* Get internal template settings when selected (0) */
-  if ( g_iRecTemplateType == 0 )
+  if (g_iRecTemplateType == 0)
   {
     if (!XBMC->GetSetting("rec_autometadata", &g_bRecAutoMetadata))
       g_bRecAutoMetadata = true;
