@@ -1878,7 +1878,7 @@ extern int cmyth_mysql_update_recordingrule(cmyth_database_t db, cmyth_recording
  * \return success: 0
  * \return failure: -(errno)
  */
-extern int cmyth_mysql_recordingrule_template(cmyth_database_t db, const char *category, const char *category_type, cmyth_recordingrule_t *rr);
+extern int cmyth_mysql_recordingrule_from_template(cmyth_database_t db, const char *category, const char *category_type, cmyth_recordingrule_t *rr);
 
 /*
  * -----------------------------------------------------------------
