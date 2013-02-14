@@ -54,6 +54,9 @@ extern "C" {
 
 #define SUBTITLE_SEPARATOR " - "
 
+#define RCVBUF_SIZE                        131072
+#define TCPBUF_SIZE                        131072
+
 /*!
  * @brief PVR macros for string exchange
  */
