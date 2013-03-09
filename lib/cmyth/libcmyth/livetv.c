@@ -736,7 +736,7 @@ cmyth_livetv_chain_setup(cmyth_recorder_t rec, int32_t tcp_rcvbuf,
 			}
 			else {
 				/* now switch to the valid program */
-				cmyth_livetv_chain_switch(new_rec, 0);
+				cmyth_livetv_chain_switch_last(new_rec);
 				new_rec->rec_livetv_chain->chain_switch_on_create = 0;
 			}
 		}
@@ -1131,7 +1131,7 @@ cmyth_livetv_chain_seek(cmyth_recorder_t rec, int64_t offset, int8_t whence)
 		whence = WHENCE_SET;
 	}
 
-	if (fp && cur >=0)
+	if (cur >=0 && cur < rec->rec_livetv_chain->chain_ct && fp)
 	{
 		if ((ret = cmyth_file_seek(fp, offset, whence)) >= 0) {
 			cur -= rec->rec_livetv_chain->chain_current;
