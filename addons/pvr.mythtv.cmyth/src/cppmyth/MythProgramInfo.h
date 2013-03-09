@@ -75,6 +75,9 @@ public:
   CStdString Coverart() const;
   CStdString Fanart() const;
 
+  CStdString Host() const;
+  unsigned int Port();
+
 private:
   boost::shared_ptr<MythPointer<cmyth_proginfo_t> > m_proginfo_t;
 

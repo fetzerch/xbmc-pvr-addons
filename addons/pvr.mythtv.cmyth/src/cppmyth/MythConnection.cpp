@@ -333,9 +333,12 @@ MythFile MythConnection::ConnectFile(MythProgramInfo &recording)
 {
   // When file is not NULL doesn't need to mean there is no more connection,
   // so always check after calling cmyth_conn_connect_file if still connected to control socket.
+  cmyth_conn_t control = NULL;
   cmyth_file_t file = NULL;
-  CMYTH_CONN_CALL_REF(file, true, cmyth_conn_connect_file(*recording.m_proginfo_t, *m_conn_t, 64 * 1024, 16 * 1024));
-  MythFile retval = MythFile(file, *this);
+  control = cmyth_conn_connect_ctrl(const_cast<char*>(recording.Host().c_str()), recording.Port(), 64 * 1024, 16 * 1024);
+  if (control != NULL)
+    file = cmyth_conn_connect_file(*recording.m_proginfo_t, control, 64 * 1024, 16 * 1024);
+  MythFile retval = MythFile(file, control);
   return retval;
 }
 
@@ -343,7 +346,7 @@ MythFile MythConnection::ConnectPath(const CStdString &filename, const CStdStrin
 {
   cmyth_file_t file = NULL;
   CMYTH_CONN_CALL_REF(file, file == NULL, cmyth_conn_connect_path(const_cast<char*>(filename.c_str()), *m_conn_t, 64 * 1024, 64 * 1024, const_cast<char*>(storageGroup.c_str())));
-  return MythFile(file, *this);
+  return MythFile(file, *m_conn_t);
 }
 
 bool MythConnection::SetBookmark(MythProgramInfo &recording, long long bookmark)

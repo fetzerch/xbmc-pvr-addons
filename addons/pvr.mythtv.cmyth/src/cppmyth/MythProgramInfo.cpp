@@ -232,3 +232,16 @@ CStdString MythProgramInfo::Fanart() const
 {
   return m_fanart;
 }
+
+CStdString MythProgramInfo::Host() const
+{
+  char* host = cmyth_proginfo_host(*m_proginfo_t);
+  CStdString retval(host);
+  ref_release(host);
+  return retval;
+}
+
+unsigned int MythProgramInfo::Port()
+{
+  return cmyth_proginfo_port(*m_proginfo_t);
+}
