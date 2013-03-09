@@ -23,15 +23,16 @@
 
 MythFile::MythFile()
   : m_file_t(new MythPointer<cmyth_file_t>())
-  , m_conn(MythConnection())
+  , m_control_t(new MythPointer<cmyth_conn_t>())
 {
 }
 
-MythFile::MythFile(cmyth_file_t myth_file, MythConnection conn)
+MythFile::MythFile(cmyth_file_t myth_file, cmyth_conn_t myth_control)
   : m_file_t(new MythPointer<cmyth_file_t>())
-  , m_conn(conn)
+  , m_control_t(new MythPointer<cmyth_conn_t>())
 {
   *m_file_t = myth_file;
+  *m_control_t = myth_control;
 }
 
 bool MythFile::IsNull() const
