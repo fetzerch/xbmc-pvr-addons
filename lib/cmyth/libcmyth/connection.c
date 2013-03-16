@@ -235,13 +235,12 @@ cmyth_connect_addr(struct addrinfo* addr, uint32_t buflen,
 
 	temp = tcp_rcvbuf;
 	size = sizeof(temp);
+	cmyth_dbg(CMYTH_DBG_DEBUG, "%s: setting socket option SO_RCVBUF to %d", __FUNCTION__, tcp_rcvbuf);
 	setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (void*)&temp, size);
 	if(getsockopt(fd, SOL_SOCKET, SO_RCVBUF, (void*)&temp, &size)) {
 		cmyth_dbg(CMYTH_DBG_ERROR, "%s: could not get rcvbuf from socket(%d)\n",
 			  __FUNCTION__, errno);
-		temp = tcp_rcvbuf;
 	}
-	tcp_rcvbuf = temp;
 
 	if (getnameinfo(addr->ai_addr, addr->ai_addrlen, namebuf, sizeof(namebuf), portbuf, sizeof(portbuf), NI_NUMERICHOST)) {
 		strcpy(namebuf, "[unknown]");
@@ -353,13 +352,12 @@ cmyth_reconnect_addr(cmyth_conn_t conn, struct addrinfo* addr)
 
 	temp = conn->conn_tcp_rcvbuf;
 	size = sizeof(temp);
+	cmyth_dbg(CMYTH_DBG_DEBUG, "%s: setting socket option SO_RCVBUF to %d", __FUNCTION__, conn->conn_tcp_rcvbuf);
 	setsockopt(fd, SOL_SOCKET, SO_RCVBUF, (void*)&temp, size);
 	if (getsockopt(fd, SOL_SOCKET, SO_RCVBUF, (void*)&temp, &size)) {
 		cmyth_dbg(CMYTH_DBG_ERROR, "%s: could not get rcvbuf from socket(%d)\n",
 			  __FUNCTION__, errno);
-		temp = conn->conn_tcp_rcvbuf;
 	}
-	conn->conn_tcp_rcvbuf = temp;
 
 	if (getnameinfo(addr->ai_addr, addr->ai_addrlen, namebuf, sizeof(namebuf), portbuf, sizeof(portbuf), NI_NUMERICHOST)) {
 		strcpy(namebuf, "[unknown]");
@@ -858,7 +856,6 @@ cmyth_conn_connect_file(cmyth_proginfo_t prog,  cmyth_conn_t control,
 {
 	cmyth_conn_t conn = NULL;
 	char *announcement = NULL;
-	char *myth_host = NULL;
 	char reply[16];
 	int err = 0;
 	int count = 0;
@@ -882,33 +879,11 @@ cmyth_conn_connect_file(cmyth_proginfo_t prog,  cmyth_conn_t control,
 			  __FUNCTION__);
 		goto shut;
 	}
-	cmyth_dbg(CMYTH_DBG_PROTO, "%s: connecting data connection\n",
-		  __FUNCTION__);
-	if (control->conn_version >= 17) {
-		myth_host = cmyth_conn_get_setting(control, prog->proginfo_host,
-		                                   "BackendServerIP");
-		if (myth_host && (strcmp(myth_host, "-1") == 0)) {
-			ref_release(myth_host);
-			myth_host = NULL;
-		}
-	}
-	if (!myth_host) {
-		cmyth_dbg(CMYTH_DBG_PROTO,
-		          "%s: BackendServerIP setting not found. Using proginfo_host: %s\n",
-		          __FUNCTION__, prog->proginfo_host);
-		myth_host = ref_alloc(strlen(prog->proginfo_host) + 1);
-		strcpy(myth_host, prog->proginfo_host);
-	}
-	conn = cmyth_connect(myth_host, prog->proginfo_port,
-			     buflen, tcp_rcvbuf);
-	cmyth_dbg(CMYTH_DBG_PROTO,
-		  "%s: done connecting data connection, conn = %d\n",
-		  __FUNCTION__, conn);
+	cmyth_dbg(CMYTH_DBG_PROTO, "%s: connecting data connection\n", __FUNCTION__);
+	conn = cmyth_connect(control->server, control->port, buflen, tcp_rcvbuf);
+	cmyth_dbg(CMYTH_DBG_PROTO, "%s: done connecting data connection, conn = %d\n", __FUNCTION__, conn);
 	if (!conn) {
-		cmyth_dbg(CMYTH_DBG_ERROR,
-			  "%s: cmyth_connect(%s, %"PRIu16", %"PRIu32") failed\n",
-			  __FUNCTION__,
-			  myth_host, prog->proginfo_port, buflen);
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: cmyth_connect(%s, %"PRIu16", %"PRIu32") failed\n", __FUNCTION__, control->server, control->port, buflen);
 		goto shut;
 	}
 	/*
@@ -993,12 +968,10 @@ cmyth_conn_connect_file(cmyth_proginfo_t prog,  cmyth_conn_t control,
 	ret->file_data = conn;
 	ret->file_id = file_id;
 	ret->file_length = file_length;
-	ref_release(myth_host);
 	return ret;
 
     shut:
 	ref_release(conn);
-	ref_release(myth_host);
 	return NULL;
 }
 
