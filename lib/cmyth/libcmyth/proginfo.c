@@ -542,44 +542,52 @@ cmyth_proginfo_check_recording(cmyth_conn_t control, cmyth_proginfo_t prog)
  * Failure: -(ERRNO)
  */
 int
-cmyth_proginfo_delete_recording(cmyth_conn_t control, cmyth_proginfo_t prog)
+cmyth_proginfo_delete_recording(cmyth_conn_t control, cmyth_proginfo_t prog, uint8_t force, uint8_t forget)
 {
-	int32_t c = 0;
+	int32_t rows_deleted = 0;
 	int err = 0;
 	int count = 0;
 	int r = 0;
 	int ret = 0;
 	char *buf;
 	char *proginfo;
+	char start_ts_dt[CMYTH_TIMESTAMP_LEN + 1];
 
 	if (!control) {
 		cmyth_dbg(CMYTH_DBG_ERROR, "%s: no connection\n",
 			  __FUNCTION__);
 		return -EINVAL;
 	}
-	if (control->conn_version < 12)
-	{
-		cmyth_dbg(CMYTH_DBG_ERROR,
-			  "%s: delete not supported with protocol ver %d\n",
-			  __FUNCTION__, control->conn_version);
-		return -EINVAL;
-	}
 
-	proginfo = cmyth_proginfo_string(control, prog);
-	if (proginfo == NULL) {
-		cmyth_dbg(CMYTH_DBG_ERROR,
-			  "%s: program_info failed.\n",
-			  __FUNCTION__);
-		return -EINVAL;
-	}
+	if (control->conn_version < 56) {
+		proginfo = cmyth_proginfo_string(control, prog);
+		if (proginfo == NULL) {
+			cmyth_dbg(CMYTH_DBG_ERROR, "%s: program_info failed.\n", __FUNCTION__);
+			return -EINVAL;
+		}
 
-	buf = malloc(strlen(proginfo) + 23 + 1);
-	if (!buf) {
+		buf = malloc(strlen(proginfo) + 21 + 1);
+		if (!buf) {
+			free(proginfo);
+			return -ENOMEM;
+		}
+		sprintf(buf, "DELETE_RECORDING[]:[]%s", proginfo);
 		free(proginfo);
-		return -ENOMEM;
+	} else {
+		cmyth_timestamp_to_string(start_ts_dt, prog->proginfo_rec_start_ts);
+		buf = malloc(17 + CMYTH_INT32_LEN + 1 + CMYTH_TIMESTAMP_LEN + 9 + 10 + 1);
+		if (!buf) {
+			return -ENOMEM;
+		}
+		sprintf(buf,"DELETE_RECORDING %"PRIu32" %s",
+			prog->proginfo_chanId,
+			start_ts_dt,
+			force ? "FORCE" : "NO_FORCE");
+
+		if (control->conn_version >= 59) {
+			strcat(buf, forget ? " FORGET" : " NO_FORGET");
+		}
 	}
-	sprintf(buf, "DELETE_RECORDING 0[]:[]%s", proginfo);
-	free(proginfo);
 
 	pthread_mutex_lock(&control->conn_mutex);
 
@@ -592,13 +600,15 @@ cmyth_proginfo_delete_recording(cmyth_conn_t control, cmyth_proginfo_t prog)
 	}
 
 	count = cmyth_rcv_length(control);
-	if ((r = cmyth_rcv_int32(control, &err, &c, count)) < 0) {
+	if ((r = cmyth_rcv_int32(control, &err, &rows_deleted, count)) < 0) {
 		cmyth_dbg(CMYTH_DBG_ERROR,
 			  "%s: cmyth_rcv_length() failed (%d)\n",
 			  __FUNCTION__, r);
 		ret = err;
 		goto out;
 	}
+	if (rows_deleted == 0)
+		ret = -1;
 
 	out:
 	pthread_mutex_unlock(&control->conn_mutex);
