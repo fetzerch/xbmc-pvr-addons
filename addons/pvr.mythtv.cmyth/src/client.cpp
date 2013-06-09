@@ -280,6 +280,13 @@ ADDON_STATUS ADDON_Create(void *hdl, void *props)
     g_client->SetLiveTVPriority(savedLiveTVPriority);
   }
 
+  XBMC->Log(LOG_DEBUG, "Creating menu hooks");
+  PVR_MENUHOOK menuHook;
+  menuHook.category = PVR_MENUHOOK_RECORDING;
+  menuHook.iHookId = MENUHOOK_REC_DELETE_AND_RERECORD;
+  menuHook.iLocalizedStringId = 30411;
+  PVR->AddMenuHook(&menuHook);
+
   XBMC->Log(LOG_DEBUG, "MythTV cmyth PVR-Client successfully created");
   m_CurStatus = ADDON_STATUS_OK;
   g_bCreated = true;

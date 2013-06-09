@@ -1739,8 +1739,12 @@ long long PVRClientMythTV::LengthRecordedStream()
 
 PVR_ERROR PVRClientMythTV::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_MENUHOOK_DATA &item)
 {
-  (void)menuhook;
-  (void)item;
+  CStdString msg;
+
+  if (menuhook.iHookId == MENUHOOK_REC_DELETE_AND_RERECORD && item.cat == PVR_MENUHOOK_RECORDING) {
+    return DeleteAndForgetRecording(item.data.recording);
+  }
+
   return PVR_ERROR_NOT_IMPLEMENTED;
 }
 
