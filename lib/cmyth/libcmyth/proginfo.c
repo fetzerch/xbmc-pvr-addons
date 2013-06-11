@@ -544,14 +544,15 @@ cmyth_proginfo_check_recording(cmyth_conn_t control, cmyth_proginfo_t prog)
 int
 cmyth_proginfo_delete_recording(cmyth_conn_t control, cmyth_proginfo_t prog, uint8_t force, uint8_t forget)
 {
-	int32_t rows_deleted = 0;
+	int32_t result_code = 0;
 	int err = 0;
 	int count = 0;
 	int r = 0;
 	int ret = 0;
 	char *buf;
 	char *proginfo;
-	char start_ts_dt[CMYTH_TIMESTAMP_LEN + 1];
+	char recstartts[CMYTH_TIMESTAMP_NUMERIC_LEN + 1];
+	cmyth_timestamp_t t_utc;
 
 	if (!control) {
 		cmyth_dbg(CMYTH_DBG_ERROR, "%s: no connection\n",
@@ -574,14 +575,26 @@ cmyth_proginfo_delete_recording(cmyth_conn_t control, cmyth_proginfo_t prog, uin
 		sprintf(buf, "DELETE_RECORDING[]:[]%s", proginfo);
 		free(proginfo);
 	} else {
-		cmyth_timestamp_to_string(start_ts_dt, prog->proginfo_rec_start_ts);
-		buf = malloc(17 + CMYTH_INT32_LEN + 1 + CMYTH_TIMESTAMP_LEN + 9 + 10 + 1);
+		if (control->conn_version < 75) {
+			ret = cmyth_timestamp_to_numstring(recstartts, prog->proginfo_rec_start_ts);
+		} else {
+			/* Convert local time to UTC time */
+			t_utc = cmyth_timestamp_utc_from_unixtime(cmyth_timestamp_to_unixtime(prog->proginfo_rec_start_ts));
+			ret = cmyth_timestamp_to_numstring(recstartts, t_utc);
+			ref_release(t_utc);
+		}
+		if (ret < 0) {
+			cmyth_dbg(CMYTH_DBG_ERROR, "%s: cmyth_timestamp_to_numstring failed.\n", __FUNCTION__);
+			return ret;
+		}
+
+		buf = malloc(17 + CMYTH_INT32_LEN + 1 + CMYTH_TIMESTAMP_NUMERIC_LEN + 9 + 10 + 1);
 		if (!buf) {
 			return -ENOMEM;
 		}
-		sprintf(buf,"DELETE_RECORDING %"PRIu32" %s",
+		sprintf(buf,"DELETE_RECORDING %"PRIu32" %s %s",
 			prog->proginfo_chanId,
-			start_ts_dt,
+			recstartts,
 			force ? "FORCE" : "NO_FORCE");
 
 		if (control->conn_version >= 59) {
@@ -600,15 +613,18 @@ cmyth_proginfo_delete_recording(cmyth_conn_t control, cmyth_proginfo_t prog, uin
 	}
 
 	count = cmyth_rcv_length(control);
-	if ((r = cmyth_rcv_int32(control, &err, &rows_deleted, count)) < 0) {
+	if ((r = cmyth_rcv_int32(control, &err, &result_code, count)) < 0) {
 		cmyth_dbg(CMYTH_DBG_ERROR,
 			  "%s: cmyth_rcv_length() failed (%d)\n",
 			  __FUNCTION__, r);
 		ret = err;
 		goto out;
 	}
-	if (rows_deleted == 0)
+
+	if (result_code == -2)
 		ret = -1;
+	else
+		ret = 0;
 
 	out:
 	pthread_mutex_unlock(&control->conn_mutex);
