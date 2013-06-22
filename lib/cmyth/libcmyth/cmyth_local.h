@@ -509,4 +509,44 @@ extern cmyth_storagegroup_file_t cmyth_storagegroup_file_create(void);
 #define cmyth_storagegroup_filelist_create __cmyth_storagegroup_filelist_create
 extern cmyth_storagegroup_filelist_t cmyth_storagegroup_filelist_create(void);
 
+/*
+ * From epginfo.c
+ */
+struct cmyth_epginfo {
+	uint32_t chanid;
+	char* callsign;
+	char* channame;
+	uint32_t sourceid;
+	char* title;
+	char* subtitle;
+	char* description;
+	time_t starttime;
+	time_t endtime;
+	char* programid;
+	char* seriesid;
+	char* category;
+	char* category_type;
+	uint32_t channum;
+};
+
+struct cmyth_epginfolist {
+	cmyth_epginfo_t *epginfolist_list;
+	int epginfolist_count;
+};
+
+#define cmyth_epginfo_create __cmyth_epginfo_create
+extern cmyth_epginfo_t cmyth_epginfo_create(void);
+
+#define cmyth_epginfolist_create __cmyth_epginfolist_create
+extern cmyth_epginfolist_t cmyth_epginfolist_create(void);
+
+/*
+ * From mythtv_mysql.c
+ */
+#define cmyth_mysql_escape_chars __cmyth_mysql_escape_chars
+extern char *cmyth_mysql_escape_chars(cmyth_database_t db, char * string);
+
+#define cmyth_mysql_query_commbreak_list __cmyth_mysql_query_commbreak_list
+extern int cmyth_mysql_query_commbreak_list(cmyth_database_t db, uint32_t chanid, time_t start_ts_dt, cmyth_commbreaklist_t breaklist, uint32_t conn_version);
+
 #endif /* __CMYTH_LOCAL_H */
