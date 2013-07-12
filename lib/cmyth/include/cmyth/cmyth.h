@@ -689,6 +689,8 @@ extern int32_t cmyth_livetv_read(cmyth_recorder_t rec,
 
 extern int cmyth_mysql_tuner_type_check(cmyth_database_t db, cmyth_recorder_t rec, int check_tuner_enabled);
 
+extern int cmyth_mysql_keep_livetv_recording(cmyth_database_t db, cmyth_proginfo_t prog, int8_t keep);
+
 /*
  * -----------------------------------------------------------------
  * Database Operations
@@ -1126,6 +1128,21 @@ extern uint16_t cmyth_proginfo_year(cmyth_proginfo_t prog);
  * \return failure: -(errno)
  */
 extern int cmyth_mysql_set_watched_status(cmyth_database_t db, cmyth_proginfo_t prog, int watchedStat);
+
+/**
+ * Retrieve the storage group for this program info
+ * \param prog proginfo handle
+ * \return null-terminated string
+ */
+extern char *cmyth_proginfo_storagegroup(cmyth_proginfo_t prog);
+
+/**
+ * Query to generate a pixmap for this program info
+ * \param prog proginfo handle
+ * \return success: 0
+ * \return failure: -(errno)
+ */
+extern int cmyth_proginfo_generate_pixmap(cmyth_conn_t control, cmyth_proginfo_t prog);
 
 /*
  * -----------------------------------------------------------------

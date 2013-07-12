@@ -1898,7 +1898,7 @@ cmyth_proginfo_get_from_timeslot(cmyth_conn_t control, uint32_t chanid, const cm
 		count -= i;
 
 		if (strcmp(msg, "OK") != 0) {
-			cmyth_dbg(CMYTH_DBG_ERROR, "%s: didn't recieve OK as response\n",
+			cmyth_dbg(CMYTH_DBG_INFO, "%s: didn't recieve OK as response\n",
 				  __FUNCTION__);
 			goto out;
 		}
@@ -1946,4 +1946,73 @@ cmyth_proginfo_get_from_timeslot(cmyth_conn_t control, uint32_t chanid, const cm
 		return prog;
 	}
 
+}
+
+char *
+cmyth_proginfo_storagegroup(cmyth_proginfo_t prog)
+{
+	if (!prog) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: NULL program information\n",
+			  __FUNCTION__);
+		return NULL;
+	}
+	return ref_hold(prog->proginfo_storagegroup);
+}
+
+int
+cmyth_proginfo_generate_pixmap(cmyth_conn_t control, cmyth_proginfo_t prog)
+{
+	int err = 0;
+	int ret = 0;
+	char *buf;
+	char *proginfo;
+
+	if (!control) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: no connection\n",
+			  __FUNCTION__);
+		return -EINVAL;
+	}
+	if (!prog) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: no program info\n",
+			  __FUNCTION__);
+		return -EINVAL;
+	}
+	if (control->conn_version < 61) {
+	cmyth_dbg(CMYTH_DBG_ERROR, "%s: protocol version doesn't support QUERY_PIXMAP2\n",
+		  __FUNCTION__);
+	return -EPERM;
+	}
+
+	proginfo = cmyth_proginfo_string(control, prog);
+	if (proginfo == NULL) {
+		cmyth_dbg(CMYTH_DBG_ERROR,
+			  "%s: program_info failed.\n",
+			  __FUNCTION__);
+		return -EINVAL;
+	}
+
+	buf = malloc(strlen(proginfo) + 37 + 1);
+	if (!buf) {
+		free(proginfo);
+		return -ENOMEM;
+	}
+	sprintf(buf, "QUERY_GENPIXMAP2[]:[]do_not_care[]:[]%s", proginfo);
+	free(proginfo);
+
+	pthread_mutex_lock(&control->conn_mutex);
+
+	if ((err = cmyth_send_message(control, buf)) < 0) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: cmyth_send_message() failed (%d)\n", __FUNCTION__, err);
+		ret = err;
+		goto out;
+	}
+	if ((ret = cmyth_rcv_okay(control)) < 0) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: cmyth_rcv_okay() failed\n", __FUNCTION__);
+	}
+
+	out:
+	pthread_mutex_unlock(&control->conn_mutex);
+	free(buf);
+
+	return ret;
 }
