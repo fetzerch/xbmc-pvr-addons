@@ -22,6 +22,7 @@
 
 #include "client.h"
 #include "tools.h"
+#include "GUIDialogSelectRecording.h"
 
 #include <time.h>
 #include <set>
@@ -1010,6 +1011,48 @@ int PVRClientMythTV::GetRecordingLastPlayedPosition(const PVR_RECORDING &recordi
     XBMC->Log(LOG_ERROR, "%s - Recording %s does not exist", __FUNCTION__, recording.strRecordingId);
 
   return bookmark;
+}
+
+bool PVRClientMythTV::KeepLiveTVRecording(MythChannel &channel)
+{
+  ProgramInfoMap::iterator it;
+  CGUIDialogSelectRecording dialog;
+  dialog.Reset();
+  dialog.SetHeading(CStdString(XBMC->GetLocalizedString(30415))); // "Keep LiveTV recording"
+  // Choose channel icon as default for recording items
+  CStdString icon = m_fileOps->GetChannelIconPath(channel.Icon());
+  // Select matching recordings: All from Group 'LiveTV' for the given channel
+  // and at least 5 secondes of duration.
+  m_recordingsLock.Lock();
+  for (it = m_recordings.begin(); it != m_recordings.end(); ++it)
+  {
+    if (!it->second.IsNull() && it->second.ChannelID() == channel.ID()
+            && it->second.RecordingGroup() == "LiveTV" && it->second.Duration() > 5)
+      dialog.AddRecording(it->second, icon);
+  }
+  m_recordingsLock.Unlock();
+  dialog.DoModal();
+  MythProgramInfo selection = dialog.GetSelectedRecording();
+  if (!selection.IsNull())
+  {
+    // Keep recording
+    if (!m_db.KeepLiveTVRecording(selection, 1))
+      return false;
+    else
+    {
+      // Finally force an update to get new status of the recording and
+      // query to generate preview.
+      m_recordingsLock.Lock();
+      it = m_recordings.find(selection.UID());
+      if (it != m_recordings.end())
+      {
+        ForceUpdateRecording(it);
+        m_con.GenerateRecordingPreview(it->second);
+      }
+      m_recordingsLock.Unlock();
+    }
+  }
+  return true;
 }
 
 int PVRClientMythTV::GetTimersAmount(void)
