@@ -1871,6 +1871,18 @@ PVR_ERROR PVRClientMythTV::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_
   if (menuhook.iHookId == MENUHOOK_REC_DELETE_AND_RERECORD && item.cat == PVR_MENUHOOK_RECORDING) {
     return DeleteAndForgetRecording(item.data.recording);
   }
+  if (menuhook.iHookId == MENUHOOK_KEEP_LIVETV_RECORDING && item.cat == PVR_MENUHOOK_CHANNEL)
+  {
+    ChannelIdMap::iterator channelByIdIt = m_channelsById.find(item.data.channel.iUniqueId);
+    if (channelByIdIt == m_channelsById.end())
+    {
+      XBMC->Log(LOG_ERROR,"%s - Channel not found", __FUNCTION__);
+      return PVR_ERROR_INVALID_PARAMETERS;
+    }
+    if (!KeepLiveTVRecording(channelByIdIt->second))
+      return PVR_ERROR_SERVER_ERROR;
+    return PVR_ERROR_NO_ERROR;
+  }
 
   return PVR_ERROR_NOT_IMPLEMENTED;
 }
