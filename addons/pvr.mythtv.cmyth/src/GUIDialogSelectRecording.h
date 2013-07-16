@@ -39,6 +39,8 @@ public:
   void SetHeading(const CStdString &heading);
   void AddRecording(MythProgramInfo &recording, const CStdString &icon);
   MythProgramInfo GetSelectedRecording();
+  void SortListByRecStartTime(bool reverse);
+  void SortListByTitle();
 
 private:
   bool OnClick(int controlId);

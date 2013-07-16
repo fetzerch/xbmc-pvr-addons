@@ -28,6 +28,10 @@
 #define WINDOW_XML_FILENAME               "DialogSelectRecording.xml"
 #define WINDOW_PROPERTY_HEADING           "Heading"
 
+bool SortTimeDesc(const std::pair<time_t, size_t> &a, const std::pair<time_t, size_t> &b) { return a.first > b.first; }
+bool SortTimeAsc(const std::pair<time_t, size_t> &a, const std::pair<time_t, size_t> &b) { return a.first < b.first; }
+bool SortStringAsc(const std::pair<CStdString, size_t> &a, const std::pair<CStdString, size_t> &b) { return a.first < b.first; }
+
 CGUIDialogSelectRecording::CGUIDialogSelectRecording()
   : m_window(0)
   , m_selection(-1)
@@ -154,4 +158,41 @@ MythProgramInfo CGUIDialogSelectRecording::GetSelectedRecording()
   if (m_selection >= 0)
       return m_recordings.at(m_selection).first;
   return MythProgramInfo();
+}
+
+void CGUIDialogSelectRecording::SortListByRecStartTime(bool reverse)
+{
+  std::vector< std::pair<MythProgramInfo, CStdString> > vtmp;
+  std::vector< std::pair<time_t, size_t> > vsort;
+  for (std::vector< std::pair<MythProgramInfo, CStdString> >::iterator it = m_recordings.begin(); it != m_recordings.end(); ++it)
+  {
+    vsort.push_back(std::make_pair(it->first.RecordingStartTime(), std::distance(m_recordings.begin(), it)));
+  }
+  if (reverse)
+    std::sort(vsort.begin(), vsort.end(), SortTimeDesc);
+  else
+    std::sort(vsort.begin(), vsort.end(), SortTimeAsc);
+  for (std::vector< std::pair<time_t, size_t> >::iterator it = vsort.begin(); it != vsort.end(); ++it)
+  {
+    vtmp.push_back(m_recordings.at(it->second));
+  }
+  Reset();
+  m_recordings = vtmp;
+}
+
+void CGUIDialogSelectRecording::SortListByTitle()
+{
+  std::vector< std::pair<MythProgramInfo, CStdString> > vtmp;
+  std::vector< std::pair<CStdString, size_t> > vsort;
+  for (std::vector< std::pair<MythProgramInfo, CStdString> >::iterator it = m_recordings.begin(); it != m_recordings.end(); ++it)
+  {
+    vsort.push_back(std::make_pair(it->first.Title(), std::distance(m_recordings.begin(), it)));
+  }
+  std::sort(vsort.begin(), vsort.end(), SortStringAsc);
+  for (std::vector< std::pair<CStdString, size_t> >::iterator it = vsort.begin(); it != vsort.end(); ++it)
+  {
+    vtmp.push_back(m_recordings.at(it->second));
+  }
+  Reset();
+  m_recordings = vtmp;
 }
