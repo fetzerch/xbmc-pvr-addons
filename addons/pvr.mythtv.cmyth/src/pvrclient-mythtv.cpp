@@ -1028,6 +1028,25 @@ MythChannel PVRClientMythTV::FindRecordingChannel(MythProgramInfo &programInfo)
   return MythChannel();
 }
 
+bool PVRClientMythTV::KeepLiveTVRecording(MythProgramInfo &programInfo)
+{
+  if (programInfo.IsLiveTV() && m_db.KeepLiveTVRecording(programInfo, 1))
+  {
+    // Finally force an update to get new status of the recording and
+    // query to generate preview.
+    m_recordingsLock.Lock();
+    ProgramInfoMap::iterator it = m_recordings.find(programInfo.UID());
+    if (it != m_recordings.end())
+    {
+      ForceUpdateRecording(it);
+      m_con.GenerateRecordingPreview(it->second);
+    }
+    m_recordingsLock.Unlock();
+    return true;
+  }
+  return false;
+}
+
 int PVRClientMythTV::GetTimersAmount(void)
 {
   if (g_bExtraDebug)
