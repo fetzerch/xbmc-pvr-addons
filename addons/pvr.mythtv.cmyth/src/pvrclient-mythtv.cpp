@@ -22,6 +22,7 @@
 
 #include "client.h"
 #include "tools.h"
+#include "GUIDialogSelectRecording.h"
 
 #include <time.h>
 #include <set>
@@ -530,7 +531,7 @@ PVR_ERROR PVRClientMythTV::GetRecordings(ADDON_HANDLE handle)
       PVR_RECORDING tag;
       memset(&tag, 0, sizeof(PVR_RECORDING));
 
-      tag.recordingTime = it->second.StartTime();
+      tag.recordingTime = it->second.RecordingStartTime();
       tag.iDuration = it->second.Duration();
       tag.iPlayCount = it->second.IsWatched() ? 1 : 0;
       tag.iLastPlayedPosition = GetRecordingLastPlayedPosition(it->second);
@@ -560,7 +561,7 @@ PVR_ERROR PVRClientMythTV::GetRecordings(ADDON_HANDLE handle)
       if (!it->second.Coverart().IsEmpty())
         strIconPath = GetArtWork(FileOps::FileTypeCoverart, it->second.Coverart());
       else
-        strIconPath = m_fileOps->GetPreviewIconPath(it->second.IconPath(), it->second.RecordingGroup());
+        strIconPath = m_fileOps->GetPreviewIconPath(it->second.IconPath(), it->second.StorageGroup());
 
       CStdString strFanartPath;
       if (!it->second.Fanart().IsEmpty())
@@ -651,6 +652,36 @@ void PVRClientMythTV::EventUpdateRecordings()
 
           // Update recording
           it->second = prog;
+        }
+        // Recording was not found using UID. If not deleted then try to add it.
+        // This case occurs on keeping a live recording and stopping watching:
+        // MythTV create a new rule (recordid) for the recording, which is part
+        // of our UID. So replace the old live recording without rule (recordid=0)
+        // by this one.
+        else if (!prog.IsDeletePending())
+        {
+          if (g_bExtraDebug)
+            XBMC->Log(LOG_DEBUG, "%s - Replace recording: %s", __FUNCTION__, prog.UID().c_str());
+          // Before adding the new, remove existing.
+          for (it = m_recordings.begin(); it != m_recordings.end(); ++it)
+          {
+            if (!it->second.IsNull()
+                    && it->second.ChannelID() == prog.ChannelID()
+                    && it->second.RecordingStartTime() == prog.RecordingStartTime()
+                    && it->second.RecordID() == 0)
+            {
+              // Copy cached framerate
+              prog.SetFrameRate(it->second.FrameRate());
+
+              // Fill artwork
+              m_db.FillRecordingArtwork(prog);
+
+              // Replace recording
+              m_recordings.erase(it);
+              m_recordings.insert(std::pair<CStdString, MythProgramInfo>(prog.UID().c_str(), prog));
+              break;
+            }
+          }
         }
         break;
       }
@@ -980,6 +1011,48 @@ int PVRClientMythTV::GetRecordingLastPlayedPosition(const PVR_RECORDING &recordi
     XBMC->Log(LOG_ERROR, "%s - Recording %s does not exist", __FUNCTION__, recording.strRecordingId);
 
   return bookmark;
+}
+
+bool PVRClientMythTV::KeepLiveTVRecording(MythChannel &channel)
+{
+  ProgramInfoMap::iterator it;
+  CGUIDialogSelectRecording dialog;
+  dialog.Reset();
+  dialog.SetHeading(CStdString(XBMC->GetLocalizedString(30415))); // "Keep LiveTV recording"
+  // Choose channel icon as default for recording items
+  CStdString icon = m_fileOps->GetChannelIconPath(channel.Icon());
+  // Select matching recordings: All from Group 'LiveTV' for the given channel
+  // and at least 5 secondes of duration.
+  m_recordingsLock.Lock();
+  for (it = m_recordings.begin(); it != m_recordings.end(); ++it)
+  {
+    if (!it->second.IsNull() && it->second.ChannelID() == channel.ID()
+            && it->second.RecordingGroup() == "LiveTV" && it->second.Duration() > 5)
+      dialog.AddRecording(it->second, icon);
+  }
+  m_recordingsLock.Unlock();
+  dialog.DoModal();
+  MythProgramInfo selection = dialog.GetSelectedRecording();
+  if (!selection.IsNull())
+  {
+    // Keep recording
+    if (!m_db.KeepLiveTVRecording(selection, 1))
+      return false;
+    else
+    {
+      // Finally force an update to get new status of the recording and
+      // query to generate preview.
+      m_recordingsLock.Lock();
+      it = m_recordings.find(selection.UID());
+      if (it != m_recordings.end())
+      {
+        ForceUpdateRecording(it);
+        m_con.GenerateRecordingPreview(it->second);
+      }
+      m_recordingsLock.Unlock();
+    }
+  }
+  return true;
 }
 
 int PVRClientMythTV::GetTimersAmount(void)
@@ -1797,6 +1870,18 @@ PVR_ERROR PVRClientMythTV::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_
 {
   if (menuhook.iHookId == MENUHOOK_REC_DELETE_AND_RERECORD && item.cat == PVR_MENUHOOK_RECORDING) {
     return DeleteAndForgetRecording(item.data.recording);
+  }
+  if (menuhook.iHookId == MENUHOOK_KEEP_LIVETV_RECORDING && item.cat == PVR_MENUHOOK_CHANNEL)
+  {
+    ChannelIdMap::iterator channelByIdIt = m_channelsById.find(item.data.channel.iUniqueId);
+    if (channelByIdIt == m_channelsById.end())
+    {
+      XBMC->Log(LOG_ERROR,"%s - Channel not found", __FUNCTION__);
+      return PVR_ERROR_INVALID_PARAMETERS;
+    }
+    if (!KeepLiveTVRecording(channelByIdIt->second))
+      return PVR_ERROR_SERVER_ERROR;
+    return PVR_ERROR_NO_ERROR;
   }
 
   return PVR_ERROR_NOT_IMPLEMENTED;

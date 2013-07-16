@@ -21,6 +21,7 @@ libmythtvcmyth_addon_la_SOURCES = src/client.cpp \
                                   src/fileOps.cpp \
                                   src/categories.cpp \
                                   src/pvrclient-mythtv.cpp \
+                                  src/GUIDialogSelectRecording.cpp \
                                   src/cppmyth/MythChannel.cpp \
                                   src/cppmyth/MythConnection.cpp \
                                   src/cppmyth/MythDatabase.cpp \
