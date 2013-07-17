@@ -1042,6 +1042,7 @@ bool PVRClientMythTV::KeepLiveTVRecording(MythProgramInfo &programInfo)
       m_con.GenerateRecordingPreview(it->second);
     }
     m_recordingsLock.Unlock();
+    XBMC->QueueNotification(QUEUE_INFO, XBMC->GetLocalizedString(30309), programInfo.Title().c_str()); // Keeping Live TV recording: %s
     return true;
   }
   return false;
