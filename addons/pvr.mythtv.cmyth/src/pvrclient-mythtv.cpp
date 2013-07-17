@@ -1863,6 +1863,29 @@ PVR_ERROR PVRClientMythTV::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_
   if (menuhook.iHookId == MENUHOOK_REC_DELETE_AND_RERECORD && item.cat == PVR_MENUHOOK_RECORDING) {
     return DeleteAndForgetRecording(item.data.recording);
   }
+  if (menuhook.iHookId == MENUHOOK_KEEP_LIVETV_RECORDING && item.cat == PVR_MENUHOOK_RECORDING)
+  {
+    CLockObject lock(m_recordingsLock);
+    ProgramInfoMap::iterator it = m_recordings.find(item.data.recording.strRecordingId);
+    if (it == m_recordings.end())
+    {
+      XBMC->Log(LOG_ERROR,"%s - Recording not found", __FUNCTION__);
+      return PVR_ERROR_INVALID_PARAMETERS;
+    }
+    if (!KeepLiveTVRecording(it->second))
+      return PVR_ERROR_FAILED;
+    return PVR_ERROR_NO_ERROR;
+  }
+  if (menuhook.iHookId == MENUHOOK_KEEP_LIVETV_RECORDING)
+  {
+    CLockObject lock(m_lock);
+    if (m_rec.IsNull())
+      return PVR_ERROR_REJECTED;
+    MythProgramInfo currentProgram = m_rec.GetCurrentProgram();
+    if (!KeepLiveTVRecording(currentProgram))
+      return PVR_ERROR_FAILED;
+    return PVR_ERROR_NO_ERROR;
+  }
 
   return PVR_ERROR_NOT_IMPLEMENTED;
 }
