@@ -145,17 +145,27 @@ bool MythProgramInfo::HasBookmark()
 
 bool MythProgramInfo::IsVisible()
 {
-  // Filter out recording of special storage groups (like LiveTV or Deleted)
-
+  // Filter out recording of special storage group Deleted
+  // Filter out recording with duration less than 5 seconds
   // When  deleting a recording, it might not be deleted immediately but marked as 'pending delete'.
   // Depending on the protocol version the recording is moved to the group Deleted or
   // the 'delete pending' flag is set
-  if (RecordingGroup() == "LiveTV" || RecordingGroup() == "Deleted" || IsDeletePending())
+  if (Duration() < 5 || RecordingGroup() == "Deleted" || IsDeletePending())
   {
     return false;
   }
 
   return true;
+}
+
+bool MythProgramInfo::IsLiveTV()
+{
+  if (RecordingGroup() == "LiveTV")
+  {
+    return true;
+  }
+
+  return false;
 }
 
 unsigned int MythProgramInfo::ChannelID()
@@ -206,6 +216,11 @@ time_t MythProgramInfo::RecordingEndTime()
 int MythProgramInfo::Priority()
 {
   return cmyth_proginfo_priority(*m_proginfo_t); // Might want to use recpriority2 instead
+}
+
+CStdString MythProgramInfo::StorageGroup()
+{
+  return cmyth_proginfo_storagegroup(*m_proginfo_t);
 }
 
 void MythProgramInfo::SetFrameRate(const long long frameRate)

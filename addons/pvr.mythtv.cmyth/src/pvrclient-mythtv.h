@@ -151,6 +151,8 @@ private:
   void ForceUpdateRecording(ProgramInfoMap::iterator it);
   int FillRecordings();
   int GetRecordingLastPlayedPosition(MythProgramInfo &programInfo);
+  MythChannel FindRecordingChannel(MythProgramInfo &programInfo);
+  bool KeepLiveTVRecording(MythProgramInfo &programInfo);
 
   // Timers
   RecordingRuleList m_recordingRules;

@@ -57,6 +57,7 @@ public:
   bool IsDeletePending();
   bool HasBookmark();
   bool IsVisible();
+  bool IsLiveTV();
 
   unsigned int ChannelID();
   CStdString ChannelName();
@@ -67,6 +68,7 @@ public:
   time_t RecordingStartTime();
   time_t RecordingEndTime();
   int Priority();
+  CStdString StorageGroup();
 
   void SetFrameRate(const long long frameRate);
   long long FrameRate() const;
