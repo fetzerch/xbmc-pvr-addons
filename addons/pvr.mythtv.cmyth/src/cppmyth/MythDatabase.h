@@ -95,6 +95,8 @@ public:
 
   bool FillRecordingArtwork(MythProgramInfo &recording);
 
+  int GetRecordingSeekOffset(const MythProgramInfo &recording, long long mark, long long *psoffset, long long *nsoffset);
+
 private:
   boost::shared_ptr<MythPointerThreadSafe<cmyth_database_t> > m_database_t;
 };
