@@ -52,6 +52,8 @@ bool         g_bRecAutoRunJob3         = false;
 bool         g_bRecAutoRunJob4         = false;
 bool         g_bRecAutoExpire          = false;
 int          g_iRecTranscoder          = 0;
+int          g_iEdlMethodType          = DEFAULT_EDL_METHOD;               ///< Method type to process Edit Decision List (0=PVR, 1=Internal)
+bool         g_bEdlEnabled             = true;
 
 ///* Client member variables */
 ADDON_STATUS m_CurStatus              = ADDON_STATUS_UNKNOWN;
@@ -253,6 +255,14 @@ ADDON_STATUS ADDON_Create(void *hdl, void *props)
       g_iRecTranscoder = 0;
   }
 
+  /* Read settings "EDL method" from settings.xml */
+  if (!XBMC->GetSetting("edl_method_provider", &g_iEdlMethodType))
+  {
+    /* If setting is unknown fallback to defaults */
+    XBMC->Log(LOG_ERROR, "Couldn't get 'edl_method_provider' setting, falling back to '%i' as default", DEFAULT_EDL_METHOD);
+    g_iEdlMethodType = DEFAULT_EDL_METHOD;
+  }
+
   free (buffer);
 
   // Create our addon
@@ -286,6 +296,12 @@ ADDON_STATUS ADDON_Create(void *hdl, void *props)
   menuHookDeleteAndRerecord.iHookId = MENUHOOK_REC_DELETE_AND_RERECORD;
   menuHookDeleteAndRerecord.iLocalizedStringId = 30411;
   PVR->AddMenuHook(&menuHookDeleteAndRerecord);
+
+  PVR_MENUHOOK menuHookSwitchOnOffEdl;
+  menuHookSwitchOnOffEdl.category = PVR_MENUHOOK_RECORDING;
+  menuHookSwitchOnOffEdl.iHookId = MENUHOOK_SWITCH_ON_OFF_EDL;
+  menuHookSwitchOnOffEdl.iLocalizedStringId = 30412;
+  PVR->AddMenuHook(&menuHookSwitchOnOffEdl);
 
   XBMC->Log(LOG_DEBUG, "MythTV cmyth PVR-Client successfully created");
   m_CurStatus = ADDON_STATUS_OK;
