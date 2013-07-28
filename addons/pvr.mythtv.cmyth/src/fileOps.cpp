@@ -75,16 +75,21 @@ CStdString FileOps::GetChannelIconPath(const CStdString &remoteFilename)
   if (g_bExtraDebug)
     XBMC->Log(LOG_DEBUG, "%s: determined localFilename: %s", __FUNCTION__, localFilename.c_str());
 
-  if (!XBMC->FileExists(localFilename, true))
+  // Check file exists in storage group
+  MythStorageGroupFile sgfile = m_con.GetStorageGroupFile(GetFolderNameByFileType(FileTypeChannelIcon), remoteFilename);
+  if (!sgfile.IsNull())
   {
-    Lock();
-    FileOps::JobItem job(localFilename, remoteFilename, "");
-    m_jobQueue.push_back(job);
-    m_queueContent.Signal();
-    Unlock();
-  }
+    if (!XBMC->FileExists(localFilename, true))
+    {
+      Lock();
+      FileOps::JobItem job(localFilename, remoteFilename, "");
+      m_jobQueue.push_back(job);
+      m_queueContent.Signal();
+      Unlock();
+    }
 
-  m_icons[remoteFilename] = localFilename;
+    m_icons[remoteFilename] = localFilename;
+  }
   return localFilename;
 }
 
