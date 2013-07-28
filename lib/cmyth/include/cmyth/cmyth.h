@@ -534,6 +534,8 @@ extern cmyth_posmap_t cmyth_recorder_get_position_map(cmyth_recorder_t rec,
 						      uint32_t start,
 						      uint32_t end);
 
+extern cmyth_posmap_t cmyth_recorder_get_duration_map(cmyth_recorder_t rec, uint32_t start, uint32_t end);
+
 extern cmyth_proginfo_t cmyth_recorder_get_recording(cmyth_recorder_t rec);
 
 extern int cmyth_recorder_stop_playing(cmyth_recorder_t rec);
@@ -921,6 +923,13 @@ extern uint16_t cmyth_proginfo_season(cmyth_proginfo_t prog);
 extern uint16_t cmyth_proginfo_episode(cmyth_proginfo_t prog);
 
 /**
+ * Retrieve the syndicated episode of a program.
+ * \param prog proginfo handle
+ * \return null-terminated string
+ */
+extern char *proginfo_syndicated_episode(cmyth_proginfo_t prog);
+
+/**
  * Retrieve the category of a program.
  * \param prog proginfo handle
  * \return null-terminated string
@@ -1118,6 +1127,20 @@ extern char *cmyth_proginfo_chanicon(cmyth_proginfo_t prog);
  * \return production year
  */
 extern uint16_t cmyth_proginfo_year(cmyth_proginfo_t prog);
+
+/**
+ * Retrieve the part number for this program info
+ * \param prog proginfo handle
+ * \return part number
+ */
+extern uint16_t cmyth_proginfo_partnumber(cmyth_proginfo_t prog);
+
+/**
+ * Retrieve the part total for this program info
+ * \param prog proginfo handle
+ * \return part total
+ */
+extern uint16_t cmyth_proginfo_parttotal(cmyth_proginfo_t prog);
 
 /**
  * Retrieve the watched status for this program info
