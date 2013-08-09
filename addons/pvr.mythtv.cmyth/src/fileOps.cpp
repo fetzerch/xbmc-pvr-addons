@@ -29,10 +29,10 @@
 #include <algorithm>
 
 using namespace ADDON;
+using namespace PLATFORM;
 
 FileOps::FileOps(MythConnection &mythConnection)
   : CThread()
-  , CMutex()
   , m_con(mythConnection)
   , m_localBasePath(g_szUserPath.c_str())
   , m_queueContent()
@@ -77,11 +77,10 @@ CStdString FileOps::GetChannelIconPath(const CStdString &remoteFilename)
 
   if (!XBMC->FileExists(localFilename, true))
   {
-    Lock();
+    CLockObject lock(m_lock);
     FileOps::JobItem job(localFilename, remoteFilename, "");
     m_jobQueue.push_back(job);
     m_queueContent.Signal();
-    Unlock();
   }
 
   m_icons[remoteFilename] = localFilename;
@@ -111,11 +110,10 @@ CStdString FileOps::GetPreviewIconPath(const CStdString &remoteFilename, const C
 
     if (!XBMC->FileExists(localFilename, true))
     {
-      Lock();
+      CLockObject lock(m_lock);
       FileOps::JobItem job(localFilename, remoteFilename, "Default");
       m_jobQueue.push_back(job);
       m_queueContent.Signal();
-      Unlock();
     }
 
     m_preview[remoteFilename] = localFilename;
@@ -145,11 +143,10 @@ CStdString FileOps::GetArtworkPath(const CStdString &remoteFilename, FileType fi
 
     if (!XBMC->FileExists(localFilename, true))
     {
-      Lock();
-        FileOps::JobItem job(localFilename, remoteFilename, GetFolderNameByFileType(fileType));
-        m_jobQueue.push_back(job);
-        m_queueContent.Signal();
-      Unlock();
+      CLockObject lock(m_lock);
+      FileOps::JobItem job(localFilename, remoteFilename, GetFolderNameByFileType(fileType));
+      m_jobQueue.push_back(job);
+      m_queueContent.Signal();
     }
     m_artworks[key] = localFilename;
   }
@@ -175,7 +172,7 @@ void FileOps::Resume()
   if (IsStopped())
   {
     XBMC->Log(LOG_DEBUG, "%s Resuming Thread", __FUNCTION__);
-    Clear();
+    m_lock.Clear();
     CreateThread();
   }
 }
@@ -194,10 +191,10 @@ void* FileOps::Process()
 
     while (!m_jobQueue.empty() && !IsStopped())
     {
-      Lock();
+      CLockObject lock(m_lock);
       FileOps::JobItem job = m_jobQueue.front();
       m_jobQueue.pop_front();
-      Unlock();
+      lock.Unlock();
 
       if (g_bExtraDebug)
         XBMC->Log(LOG_DEBUG,"%s Job fetched: local: %s, remote: %s, storagegroup: %s", __FUNCTION__, job.m_localFilename.c_str(), job.m_remoteFilename.c_str(), job.m_storageGroup.c_str());
@@ -252,10 +249,9 @@ void* FileOps::Process()
     }
 
     // Try to recache the currently empty files
-    Lock();
+    CLockObject lock(m_lock);
     m_jobQueue.insert(m_jobQueue.end(), jobQueueDelayed.begin(), jobQueueDelayed.end());
     jobQueueDelayed.clear();
-    Unlock();
   }
 
   XBMC->Log(LOG_DEBUG, "%s FileOps Thread Stopped", __FUNCTION__);
@@ -334,7 +330,7 @@ void FileOps::CleanCache()
 
   XBMC->Log(LOG_DEBUG, "%s Cleaning cache %s", __FUNCTION__, m_localBasePath.c_str());
 
-  Lock();
+  CLockObject lock(m_lock);
 
   // Remove cache sub directories
   std::vector<FileType>::const_iterator it;
@@ -359,8 +355,6 @@ void FileOps::CleanCache()
   // Clear the cached local filenames so that new cache jobs get generated
   m_icons.clear();
   m_preview.clear();
-
-  Unlock();
 
   XBMC->Log(LOG_DEBUG, "%s Cleaned cache %s", __FUNCTION__, m_localBasePath.c_str());
 }
