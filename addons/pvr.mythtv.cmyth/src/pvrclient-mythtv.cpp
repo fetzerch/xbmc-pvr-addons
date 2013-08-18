@@ -22,6 +22,7 @@
 
 #include "client.h"
 #include "tools.h"
+#include "edlStreamHandler.h"
 
 #include <time.h>
 #include <set>
@@ -906,6 +907,12 @@ int PVRClientMythTV::GetRecordingLastPlayedPosition(MythProgramInfo &programInfo
 
 PVR_ERROR PVRClientMythTV::GetRecordingEdl(const PVR_RECORDING &recording, PVR_EDL_ENTRY entries[], int *size)
 {
+  // If internal method is selected to process EDL then run off.
+  if (!g_bEdlEnabled || g_iEdlMethodType != 0)
+  {
+    *size = 0;
+    return PVR_ERROR_NO_ERROR;
+  }
   if (g_bExtraDebug)
   {
     XBMC->Log(LOG_DEBUG, "%s - Reading edl for: %s", __FUNCTION__, recording.strTitle);
@@ -1724,7 +1731,13 @@ bool PVRClientMythTV::OpenRecordedStream(const PVR_RECORDING &recording)
       // Disable playback mode: Allow all
       m_pEventHandler->DisablePlayback();
     }
-
+    // If internal method is selected to process EDL then initialize the new stream handler.
+    else if (g_bEdlEnabled && g_iEdlMethodType == 1)
+    {
+      EdlStreamHandler *streamHandler = new EdlStreamHandler();
+      streamHandler->LoadCutList(m_con, m_db, it->second);
+      m_file.RegisterStreamHandler(streamHandler);
+    }
     if (g_bExtraDebug)
       XBMC->Log(LOG_DEBUG, "%s - Done - %s", __FUNCTION__, (m_file.IsNull() ? "false" : "true"));
 
@@ -1800,6 +1813,23 @@ PVR_ERROR PVRClientMythTV::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_
 {
   if (menuhook.iHookId == MENUHOOK_REC_DELETE_AND_RERECORD && item.cat == PVR_MENUHOOK_RECORDING) {
     return DeleteAndForgetRecording(item.data.recording);
+  }
+  if (menuhook.iHookId == MENUHOOK_SWITCH_ON_OFF_EDL)
+  {
+      g_bEdlEnabled = (g_bEdlEnabled ? false : true);
+      if (g_bEdlEnabled)
+      {
+        XBMC->QueueNotification(QUEUE_INFO, XBMC->GetLocalizedString(30310));
+      }
+      else
+      {
+        XBMC->QueueNotification(QUEUE_INFO, XBMC->GetLocalizedString(30311));
+        if (!m_file.IsNull() && g_iEdlMethodType == 1) {
+          // Plug the default stream handler to current playback
+          m_file.RegisterStreamHandler(new BasicStreamHandler());
+        }
+      }
+      return PVR_ERROR_NO_ERROR;
   }
 
   return PVR_ERROR_NOT_IMPLEMENTED;

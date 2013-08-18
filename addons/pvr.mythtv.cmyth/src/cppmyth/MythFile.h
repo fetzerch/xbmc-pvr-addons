@@ -30,8 +30,25 @@ extern "C" {
 class MythFile
 {
 public:
+  class StreamHandler
+  {
+  public:
+    friend class MythFile;
+    StreamHandler() : m_myth_file(NULL) { }
+    virtual ~StreamHandler();
+
+  protected:
+    void Register(const MythFile &file);
+    virtual unsigned long long Length() = 0;
+    virtual int Read(void *buffer, unsigned int length) = 0;
+    virtual long long Seek(long long offset, int whence) = 0;
+    virtual unsigned long long Position() = 0;
+
+    cmyth_file_t m_myth_file;
+  };
+
   MythFile();
-  MythFile(cmyth_file_t myth_file, MythConnection conn);
+  MythFile(cmyth_file_t myth_file, MythConnection &conn);
 
   bool IsNull() const;
 
@@ -42,7 +59,22 @@ public:
   long long Seek(long long offset, int whence);
   unsigned long long Position();
 
+  void RegisterStreamHandler(StreamHandler *stream);
+  StreamHandler *GetStreamHandler();
+  
 private:
   boost::shared_ptr<MythPointer<cmyth_file_t> > m_file_t;
   MythConnection m_conn;
+
+  boost::shared_ptr<StreamHandler> m_stream;
+
+};
+
+class BasicStreamHandler : public MythFile::StreamHandler
+{
+protected:
+  virtual unsigned long long Length();
+  virtual int Read(void *buffer, unsigned int length);
+  virtual long long Seek(long long offset, int whence);
+  virtual unsigned long long Position();
 };

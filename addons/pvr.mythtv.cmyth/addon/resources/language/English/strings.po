@@ -66,6 +66,18 @@ msgctxt "#30011"
 msgid "Prefer Live TV and cancel conflicting recording"
 msgstr ""
 
+msgctxt "#30012"
+msgid "EDL method provider"
+msgstr ""
+
+msgctxt "#30013"
+msgid "PVR"
+msgstr ""
+
+msgctxt "#30014"
+msgid "Internal"
+msgstr ""
+
 msgctxt "#30019"
 msgid "General"
 msgstr ""
@@ -168,7 +180,19 @@ msgctxt "#30308"
 msgid "Stopping Live TV due to conflicting recording: %s"
 msgstr ""
 
+msgctxt "#30310"
+msgid "EDL processing is ENABLED"
+msgstr ""
+
+msgctxt "#30311"
+msgid "EDL processing is DISABLED"
+msgstr ""
+
 # Menu Hooks
 msgctxt "#30411"
 msgid "Delete and re-record"
+msgstr ""
+
+msgctxt "#30412"
+msgid "Enable/Disable EDL processing"
 msgstr ""

@@ -305,3 +305,11 @@ bool MythDatabase::FillRecordingArtwork(MythProgramInfo &recording)
   }
   return false;
 }
+
+int MythDatabase::GetRecordingSeekOffset(const MythProgramInfo &recording, long long mark, long long *psoffset, long long *nsoffset)
+{
+  int mask = 0;
+
+  CMYTH_DB_CALL(mask, mask < 0, cmyth_mysql_get_recording_seek_offset(*m_database_t, *recording.m_proginfo_t, mark, (int64_t*)psoffset, (int64_t*)nsoffset));
+  return mask;
+}
