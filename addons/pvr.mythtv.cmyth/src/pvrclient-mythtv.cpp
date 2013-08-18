@@ -942,6 +942,43 @@ MythChannel PVRClientMythTV::FindRecordingChannel(MythProgramInfo &programInfo)
   return MythChannel();
 }
 
+bool PVRClientMythTV::IsMyLiveTVRecording(MythProgramInfo& programInfo)
+{
+  if (!programInfo.IsNull() && programInfo.IsLiveTV())
+  {
+    if (!m_rec.IsNull() && m_rec.IsRecording())
+    {
+      MythProgramInfo currentProgram = m_rec.GetCurrentProgram();
+      if (currentProgram == programInfo)
+        return true;
+    }
+  }
+  return false;
+}
+
+bool PVRClientMythTV::KeepLiveTVRecording(MythProgramInfo &programInfo, bool keep)
+{
+  bool retval = m_db.KeepLiveTVRecording(programInfo, keep);
+  if (retval)
+  {
+    // Force an update to get new status of the recording.
+    m_recordingsLock.Lock();
+    ProgramInfoMap::iterator it = m_recordings.find(programInfo.UID());
+    if (it != m_recordings.end())
+    {
+      ForceUpdateRecording(it);
+      // On keep query to generate the preview.
+      if (keep)
+      {
+        m_con.GenerateRecordingPreview(it->second);
+      }
+    }
+    m_recordingsLock.Unlock();
+    return true;
+  }
+  return false;
+}
+
 void PVRClientMythTV::UpdateSchedules()
 {
   m_scheduleManager->Update();
@@ -1126,6 +1163,32 @@ PVR_ERROR PVRClientMythTV::GetTimers(ADDON_HANDLE handle)
 PVR_ERROR PVRClientMythTV::AddTimer(const PVR_TIMER &timer)
 {
   XBMC->Log(LOG_DEBUG, "%s - title: %s, start: %ld, end: %ld, chanID: %u", __FUNCTION__, timer.strTitle, timer.startTime, timer.endTime, timer.iClientChannelUid);
+  // Check if our timer is quick recording of live:
+  // Assumptions: Timer start time = 0, and our live recorder is lock on the same channel.
+  // If true then keep recording, setup recorder and let backend handle the rule.
+  CLockObject lock(m_lock);
+  if (timer.startTime == 0 && !m_rec.IsNull() && m_rec.IsRecording())
+  {
+    MythProgramInfo currentProgram = m_rec.GetCurrentProgram();
+    if ((unsigned int)timer.iClientChannelUid == currentProgram.ChannelID())
+    {
+      XBMC->Log(LOG_DEBUG, "%s - Timer is a quick recording. Toggling Record on", __FUNCTION__);
+      if (m_rec.IsLiveRecording())
+      {
+        // Already done !
+        XBMC->Log(LOG_ERROR, "%s - Record already on !!!", __FUNCTION__);
+        return PVR_ERROR_REJECTED;
+      }
+      if (KeepLiveTVRecording(currentProgram, true) && m_rec.SetLiveRecording(true))
+        return PVR_ERROR_NO_ERROR;
+      else
+        return PVR_ERROR_FAILED;
+    }
+  }
+  lock.Unlock();
+
+  // Otherwise create the rule to schedule record
+  XBMC->Log(LOG_DEBUG, "%s - Creating new recording rule", __FUNCTION__);
   MythScheduleManager::MSM_ERROR ret;
 
   MythRecordingRule rule = PVRtoMythRecordingRule(timer);
@@ -1146,6 +1209,27 @@ PVR_ERROR PVRClientMythTV::AddTimer(const PVR_TIMER &timer)
 PVR_ERROR PVRClientMythTV::DeleteTimer(const PVR_TIMER &timer, bool bForceDelete)
 {
   (void)bForceDelete;
+  // Check if our timer is related to rule for live recording:
+  // Assumptions: Recorder handle a live recording for this rule Id.
+  // If true then expire recording, setup recorder and let backend handle the rule.
+  CLockObject lock(m_lock);
+  if (!m_rec.IsNull() && m_rec.IsLiveRecording())
+  {
+    MythProgramInfo *recording = m_scheduleManager->FindUpComingByIndex(timer.iClientIndex);
+    MythProgramInfo currentProgram = m_rec.GetCurrentProgram();
+    if (recording->RecordID() == currentProgram.RecordID())
+    {
+      XBMC->Log(LOG_DEBUG, "%s - Timer %i is a quick recording. Toggling Record off", __FUNCTION__, timer.iClientIndex);
+      if (KeepLiveTVRecording(currentProgram, false) && m_rec.SetLiveRecording(false))
+        return PVR_ERROR_NO_ERROR;
+      else
+        return PVR_ERROR_FAILED;
+    }
+  }
+  lock.Unlock();
+
+  // Otherwise delete scheduled rule
+  XBMC->Log(LOG_DEBUG, "%s - Deleting timer %i", __FUNCTION__, timer.iClientIndex);
   MythScheduleManager::MSM_ERROR ret;
 
   ret = m_scheduleManager->DeleteRecording(timer.iClientIndex);
@@ -1514,12 +1598,13 @@ bool PVRClientMythTV::SwitchChannel(const PVR_CHANNEL &channelinfo)
     return false;
   }
 
-  // If the recorder is recording and channel is tunable then use SET_CHANNEL method.
-  // Otherwise use fallback method and reopen the live stream:
+  // If recorder handle 'LiveTV' recording and channel is tunable then use SET_CHANNEL method.
+  // Otherwise use fallback method and reopen the live stream with a new recorder:
   //  - Channel is available on an other input card
   //  - Recorder is a DEMO and it does not record
   //  - Recorder is not recording for unknown reasons
-  if (m_rec.IsRecording() && m_rec.CheckChannel(channelByIdIt->second))
+  //  - Recorder must keep live
+  if (!m_rec.IsLiveRecording() && m_rec.IsRecording() && m_rec.CheckChannel(channelByIdIt->second))
   {
     if (!(retval = m_rec.SetChannel(channelByIdIt->second)))
     {
@@ -1748,6 +1833,39 @@ PVR_ERROR PVRClientMythTV::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_
 {
   if (menuhook.iHookId == MENUHOOK_REC_DELETE_AND_RERECORD && item.cat == PVR_MENUHOOK_RECORDING) {
     return DeleteAndForgetRecording(item.data.recording);
+  }
+
+  if (menuhook.iHookId == MENUHOOK_KEEP_LIVETV_RECORDING && item.cat == PVR_MENUHOOK_RECORDING)
+  {
+    CLockObject lock(m_recordingsLock);
+    ProgramInfoMap::iterator it = m_recordings.find(item.data.recording.strRecordingId);
+    if (it == m_recordings.end())
+    {
+      XBMC->Log(LOG_ERROR,"%s - Recording not found", __FUNCTION__);
+      return PVR_ERROR_INVALID_PARAMETERS;
+    }
+    // If recording is current live show then keep it and set live recorder
+    if (IsMyLiveTVRecording(it->second))
+    {
+      CLockObject mlock(m_lock);
+      if (m_rec.IsLiveRecording())
+        // Already done !!!
+        return PVR_ERROR_REJECTED;
+      if (KeepLiveTVRecording(it->second, true) && m_rec.SetLiveRecording(true))
+        return PVR_ERROR_NO_ERROR;
+    }
+    // Else keep old live recording
+    else
+    {
+      if (KeepLiveTVRecording(it->second,true))
+      {
+        CStdString info = CStdString(XBMC->GetLocalizedString(menuhook.iLocalizedStringId));
+        info.append(": ").append(it->second.Title());
+        XBMC->QueueNotification(QUEUE_INFO, info.c_str());
+        return PVR_ERROR_NO_ERROR;
+      }
+    }
+    return PVR_ERROR_FAILED;
   }
 
   return PVR_ERROR_NOT_IMPLEMENTED;

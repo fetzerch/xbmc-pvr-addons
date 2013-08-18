@@ -30,6 +30,7 @@ MythRecorder::MythRecorder()
   : m_recorder_t(new MythPointerThreadSafe<cmyth_recorder_t>())
   , m_liveChainUpdated(new int(0))
   , m_conn()
+  , m_liveRecording(false)
 {
 }
 
@@ -37,6 +38,7 @@ MythRecorder::MythRecorder(cmyth_recorder_t cmyth_recorder, const MythConnection
   : m_recorder_t(new MythPointerThreadSafe<cmyth_recorder_t>())
   , m_liveChainUpdated(new int(0))
   , m_conn(conn)
+  , m_liveRecording(false)
 {
   *m_recorder_t = cmyth_recorder;
 }
@@ -317,6 +319,22 @@ bool MythRecorder::Stop()
   Lock();
   retval = cmyth_recorder_stop_livetv(*m_recorder_t);
   Unlock();
+  return retval >= 0;
+}
+
+bool MythRecorder::IsLiveRecording()
+{
+  return m_liveRecording;
+}
+
+bool MythRecorder::SetLiveRecording(bool recording)
+{
+  int retval = 0;
+  Lock();
+  retval = cmyth_recorder_set_live_recording(*m_recorder_t, (recording ? 1 : 0));
+  Unlock();
+  // Track it
+  m_liveRecording = (retval == 1);
   return retval >= 0;
 }
 
