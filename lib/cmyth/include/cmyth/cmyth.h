@@ -1362,6 +1362,15 @@ typedef enum {
 extern cmyth_recordingrule_t cmyth_recordingrule_init(void);
 
 /**
+ * Duplicate recording schedule structure into a new.
+ * Before forgetting the reference to this recording rule structure
+ * the caller must call ref_release().
+ * \return success: A new recording rule
+ * \return failure: NULL
+ */
+extern cmyth_recordingrule_t cmyth_recordingrule_dup(cmyth_recordingrule_t rule);
+
+/**
  * Retrieves the 'recordid' field of a recording rule structure.
  * \param rr
  * \return success: recordid
@@ -1783,6 +1792,21 @@ extern uint32_t cmyth_recordingrule_transcoder(cmyth_recordingrule_t rr);
 extern void cmyth_recordingrule_set_transcoder(cmyth_recordingrule_t rr, uint32_t transcoder);
 
 /**
+ * Retrieves the 'parentid' field of a recording rule structure.
+ * \param rr
+ * \return success: parentid
+ * \return failure: -(errno)
+ */
+extern uint32_t cmyth_recordingrule_parentid(cmyth_recordingrule_t rr);
+
+/**
+ * Set the 'parentid' field of the recording rule structure 'rr'.
+ * \param rr
+ * \param parentid
+ */
+extern void cmyth_recordingrule_set_parentid(cmyth_recordingrule_t rr, uint32_t parentid);
+
+/**
  * Retrieves the 'profile' field of a recording rule structure.
  * Before forgetting the reference to this string the caller
  * must call ref_release().
@@ -1931,7 +1955,7 @@ extern int cmyth_mysql_add_recordingrule(cmyth_database_t db, cmyth_recordingrul
  * \return failure: -(errno)
  * \see cmyth_recordingrule_recordid
  */
-extern int cmyth_mysql_delete_recordingrule(cmyth_database_t db, uint32_t recordid);
+extern int cmyth_mysql_delete_recordingrule(cmyth_database_t db, cmyth_recordingrule_t rr);
 
 /**
  * Update recording rule within the database.
@@ -2389,8 +2413,7 @@ extern uint32_t cmyth_epginfo_channum(cmyth_epginfo_t e);
 
 extern int cmyth_mysql_get_prog_finder_char_title(cmyth_database_t db, cmyth_epginfolist_t *epglist, time_t starttime, char *program_name);
 extern int cmyth_mysql_get_prog_finder_time(cmyth_database_t db, cmyth_epginfolist_t *epglist,  time_t starttime, char *program_name);
-extern int cmyth_mysql_get_prog_finder_time2(cmyth_database_t db, cmyth_epginfolist_t *epglist,  time_t starttime, char *program_name);
-extern int cmyth_mysql_get_prog_finder_chan(cmyth_database_t db, cmyth_epginfo_t *epg, uint32_t chanid);
+extern int cmyth_mysql_get_prog_finder_chan(cmyth_database_t db, cmyth_epginfo_t *epg, time_t attime, uint32_t chanid);
 extern int cmyth_mysql_get_prog_finder_time_title_chan(cmyth_database_t db, cmyth_epginfo_t *epg, time_t starttime, char *program_name, uint32_t chanid);
 extern int cmyth_mysql_get_guide(cmyth_database_t db, cmyth_epginfolist_t *epglist, uint32_t chanid, time_t starttime, time_t endtime);
 extern int cmyth_mysql_get_prev_recorded(cmyth_database_t db, cmyth_epginfolist_t *epglist);
