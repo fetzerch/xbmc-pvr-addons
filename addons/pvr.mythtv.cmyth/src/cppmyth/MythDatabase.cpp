@@ -97,11 +97,11 @@ bool MythDatabase::FindProgram(time_t starttime, int channelid, const CStdString
   return retval > 0;
 }
 
-bool MythDatabase::FindCurrentProgram(int channelid, MythEPGInfo &epgInfo)
+bool MythDatabase::FindCurrentProgram(time_t attime, int channelid, MythEPGInfo &epgInfo)
 {
   int retval = 0;
   cmyth_epginfo_t epg = NULL;
-  CMYTH_DB_CALL(retval, retval < 0, cmyth_mysql_get_prog_finder_chan(*m_database_t, &epg, channelid));
+  CMYTH_DB_CALL(retval, retval < 0, cmyth_mysql_get_prog_finder_chan(*m_database_t, &epg, attime, channelid));
   epgInfo = MythEPGInfo(epg);
   return retval > 0;
 }
@@ -218,10 +218,10 @@ bool MythDatabase::UpdateRecordingRule(const MythRecordingRule &rule)
   return retval > 0;
 }
 
-bool MythDatabase::DeleteRecordingRule(unsigned int recordid)
+bool MythDatabase::DeleteRecordingRule(const MythRecordingRule &rule)
 {
   int retval = 0;
-  CMYTH_DB_CALL(retval, retval < 0, cmyth_mysql_delete_recordingrule(*m_database_t, recordid));
+  CMYTH_DB_CALL(retval, retval < 0, cmyth_mysql_delete_recordingrule(*m_database_t, *rule.m_recordingrule_t));
   return retval > 0;
 }
 
