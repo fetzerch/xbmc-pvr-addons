@@ -474,6 +474,12 @@ PVR_ERROR PVRClientMythTV::GetRecordings(ADDON_HANDLE handle)
       CStdString strIconPath;
       if (!it->second.Coverart().IsEmpty())
         strIconPath = m_fileOps->GetArtworkPath(it->second.Coverart(), FileOps::FileTypeCoverart);
+      else if (it->second.IsLiveTV())
+      {
+        MythChannel channel = FindRecordingChannel(it->second);
+        if (!channel.IsNull())
+          strIconPath = m_fileOps->GetChannelIconPath(channel.Icon());
+      }
       else
         strIconPath = m_fileOps->GetPreviewIconPath(it->second.IconPath(), it->second.StorageGroup());
 
@@ -667,7 +673,7 @@ int PVRClientMythTV::FillRecordings()
   // Fill artworks
   for (ProgramInfoMap::iterator it = m_recordings.begin(); it != m_recordings.end(); ++it)
   {
-    if (!it->second.IsNull() && it->second.IsVisible())
+    if (!it->second.IsNull() && it->second.IsVisible() && !it->second.IsLiveTV())
     {
       m_db.FillRecordingArtwork(it->second);
       res++;
@@ -924,6 +930,16 @@ int PVRClientMythTV::GetRecordingLastPlayedPosition(const PVR_RECORDING &recordi
     XBMC->Log(LOG_ERROR, "%s - Recording %s does not exist", __FUNCTION__, recording.strRecordingId);
 
   return bookmark;
+}
+
+MythChannel PVRClientMythTV::FindRecordingChannel(MythProgramInfo &programInfo)
+{
+  ChannelIdMap::iterator channelByIdIt = m_channelsById.find(programInfo.ChannelID());
+  if (channelByIdIt != m_channelsById.end())
+  {
+    return channelByIdIt->second;
+  }
+  return MythChannel();
 }
 
 void PVRClientMythTV::UpdateSchedules()
