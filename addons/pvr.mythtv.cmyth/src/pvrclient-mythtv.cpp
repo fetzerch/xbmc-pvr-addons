@@ -691,6 +691,17 @@ PVR_ERROR PVRClientMythTV::DeleteRecording(const PVR_RECORDING &recording)
   ProgramInfoMap::iterator it = m_recordings.find(recording.strRecordingId);
   if (it != m_recordings.end())
   {
+    // Deleting Live recording is prohibited. Otherwise continue
+    if (this->IsMyLiveTVRecording(it->second))
+    {
+      if (it->second.IsLiveTV())
+        return PVR_ERROR_RECORDING_RUNNING;
+      // it is kept then ignore it now.
+      if (KeepLiveTVRecording(it->second, false) && m_rec.SetLiveRecording(false))
+        return PVR_ERROR_NO_ERROR;
+      else
+        return PVR_ERROR_FAILED;
+    }
     bool ret = m_con.DeleteRecording(it->second);
     if (ret)
     {
@@ -718,6 +729,17 @@ PVR_ERROR PVRClientMythTV::DeleteAndForgetRecording(const PVR_RECORDING &recordi
   ProgramInfoMap::iterator it = m_recordings.find(recording.strRecordingId);
   if (it != m_recordings.end())
   {
+    // Deleting Live recording is prohibited. Otherwise continue
+    if (this->IsMyLiveTVRecording(it->second))
+    {
+      if (it->second.IsLiveTV())
+        return PVR_ERROR_RECORDING_RUNNING;
+      // it is kept then ignore it now.
+      if (KeepLiveTVRecording(it->second, false) && m_rec.SetLiveRecording(false))
+        return PVR_ERROR_NO_ERROR;
+      else
+        return PVR_ERROR_FAILED;
+    }
     bool ret = m_con.DeleteAndForgetRecording(it->second);
     if (ret)
     {
@@ -944,7 +966,7 @@ MythChannel PVRClientMythTV::FindRecordingChannel(MythProgramInfo &programInfo)
 
 bool PVRClientMythTV::IsMyLiveTVRecording(MythProgramInfo& programInfo)
 {
-  if (!programInfo.IsNull() && programInfo.IsLiveTV())
+  if (!programInfo.IsNull())
   {
     if (!m_rec.IsNull() && m_rec.IsRecording())
     {
@@ -1206,17 +1228,16 @@ PVR_ERROR PVRClientMythTV::DeleteTimer(const PVR_TIMER &timer, bool bForceDelete
 {
   (void)bForceDelete;
   // Check if our timer is related to rule for live recording:
-  // Assumptions: Recorder handle a live recording for this rule Id.
+  // Assumptions: Recorder handle same recording.
   // If true then expire recording, setup recorder and let backend handle the rule.
   CLockObject lock(m_lock);
   if (!m_rec.IsNull() && m_rec.IsLiveRecording())
   {
     MythProgramInfo *recording = m_scheduleManager->FindUpComingByIndex(timer.iClientIndex);
-    MythProgramInfo currentProgram = m_rec.GetCurrentProgram();
-    if (recording->RecordID() == currentProgram.RecordID())
+    if (recording && this->IsMyLiveTVRecording(*recording))
     {
       XBMC->Log(LOG_DEBUG, "%s - Timer %i is a quick recording. Toggling Record off", __FUNCTION__, timer.iClientIndex);
-      if (KeepLiveTVRecording(currentProgram, false) && m_rec.SetLiveRecording(false))
+      if (KeepLiveTVRecording(*recording, false) && m_rec.SetLiveRecording(false))
         return PVR_ERROR_NO_ERROR;
       else
         return PVR_ERROR_FAILED;
