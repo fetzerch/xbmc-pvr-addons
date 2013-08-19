@@ -1848,6 +1848,9 @@ PVR_ERROR PVRClientMythTV::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_
       XBMC->Log(LOG_ERROR,"%s - Recording not found", __FUNCTION__);
       return PVR_ERROR_INVALID_PARAMETERS;
     }
+    // bail if not LiveTV
+    if (!it->second.IsLiveTV())
+      return PVR_ERROR_NO_ERROR;
     // If recording is current live show then keep it and set live recorder
     if (IsMyLiveTVRecording(it->second))
     {
