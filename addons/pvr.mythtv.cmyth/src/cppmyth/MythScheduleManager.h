@@ -142,7 +142,6 @@ private:
 
   NodeList m_rules;
   NodeById m_rulesById;
-  //RuleIdx m_rulesByClientIndex;
   RecordingList m_recordings;
   RecordingIndexByRuleId m_recordingIndexByRuleId;
 };

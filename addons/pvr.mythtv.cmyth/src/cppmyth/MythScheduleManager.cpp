@@ -22,6 +22,8 @@
 #include "../client.h"
 #include "../tools.h"
 
+#include <stdexcept>
+
 using namespace ADDON;
 using namespace PLATFORM;
 
@@ -127,7 +129,9 @@ void MythScheduleManager::Setup()
 
 unsigned int MythScheduleManager::MakeIndex(MythProgramInfo& recording) const
 {
-  return (recording.RecordID() << 16) +hashvalue(0xFFFF, recording.UID().c_str());
+  // Recordings must keep same identifier even after refreshing cache (cf Update).
+  // Numeric hash of UID is used to make the constant numeric identifier.
+  return (recording.RecordID() << 16) + hashvalue(0xFFFF, recording.UID().c_str());
   //return (recording.RecordID() << 12) + hashvalue(0xFFFFFL, recording.UID().c_str());
   //return hashvalue(0xFFFFFFFFL, recording.UID().c_str());
 }
@@ -163,7 +167,7 @@ MythScheduleManager::MSM_ERROR MythScheduleManager::DeleteRecording(unsigned int
   MythRecordingRuleNode *node = this->FindRuleById(recording->RecordID());
   if (node)
   {
-    // An other client could be delete rules at the same time. So returns always SUCCESS even database delete fails.
+    // An other client could delete our rule at the same time. So returns always SUCCESS even database delete fails.
     XBMC->Log(LOG_DEBUG, "%s - %u : Found rule %u type %d", __FUNCTION__, index, node->m_rule.RecordID(), node->m_rule.Type());
     // Delete overrides before.
     if (node->HasOverrideRules())
@@ -447,7 +451,7 @@ MythScheduleManager::MSM_ERROR MythScheduleManager::UpdateRecording(unsigned int
         {
           method = METHOD_FULL_UPDATE;
         }
-          // When active we create override rule
+        // When active we create override rule
         else
         {
           // Only priority can be overriden
@@ -548,9 +552,16 @@ ScheduleList MythScheduleManager::FindUpComingByRuleId(unsigned int recordID) co
 
 MythProgramInfo *MythScheduleManager::FindUpComingByIndex(unsigned int index) const
 {
-  // @TODO: Catch exception
   CLockObject lock(m_lock);
-  return m_recordings.at(index).get();
+  try
+  {
+    return m_recordings.at(index).get();
+  }
+  catch (std::out_of_range &e)
+  {
+    XBMC->Log(LOG_ERROR, "%s - Index not found: %u", __FUNCTION__, index);
+    return NULL;
+  }
 }
 
 void MythScheduleManager::Update()
