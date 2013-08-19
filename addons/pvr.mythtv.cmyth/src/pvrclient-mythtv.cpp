@@ -1174,11 +1174,7 @@ PVR_ERROR PVRClientMythTV::AddTimer(const PVR_TIMER &timer)
     {
       XBMC->Log(LOG_DEBUG, "%s - Timer is a quick recording. Toggling Record on", __FUNCTION__);
       if (m_rec.IsLiveRecording())
-      {
-        // Already done !
-        XBMC->Log(LOG_ERROR, "%s - Record already on !!!", __FUNCTION__);
-        return PVR_ERROR_REJECTED;
-      }
+        XBMC->Log(LOG_NOTICE, "%s - Record already on !!! Retrying...", __FUNCTION__);
       if (KeepLiveTVRecording(currentProgram, true) && m_rec.SetLiveRecording(true))
         return PVR_ERROR_NO_ERROR;
       else
@@ -1847,12 +1843,9 @@ PVR_ERROR PVRClientMythTV::CallMenuHook(const PVR_MENUHOOK &menuhook, const PVR_
     // If recording is current live show then keep it and set live recorder
     if (IsMyLiveTVRecording(it->second))
     {
-      CLockObject mlock(m_lock);
-      if (m_rec.IsLiveRecording())
-        // Already done !!!
-        return PVR_ERROR_REJECTED;
       if (KeepLiveTVRecording(it->second, true) && m_rec.SetLiveRecording(true))
         return PVR_ERROR_NO_ERROR;
+      return PVR_ERROR_FAILED;
     }
     // Else keep old live recording
     else

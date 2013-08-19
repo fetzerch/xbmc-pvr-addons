@@ -268,6 +268,9 @@ bool MythRecorder::LiveTVDoneRecording(const CStdString &msg)
 {
   int retval = 0;
   Lock();
+  // Recording is now completed and recorder doesn't keep anymore. Track it.
+  m_liveRecording = false;
+  // Return feedback to check the chain
   retval = cmyth_livetv_done_recording(*m_recorder_t, const_cast<char*>(msg.c_str()));
   Unlock();
   if (retval != 0)
@@ -324,7 +327,11 @@ bool MythRecorder::Stop()
 
 bool MythRecorder::IsLiveRecording()
 {
-  return m_liveRecording;
+  bool retval;
+  Lock();
+  retval = m_liveRecording;
+  Unlock();
+  return retval;
 }
 
 bool MythRecorder::SetLiveRecording(bool recording)
@@ -332,9 +339,12 @@ bool MythRecorder::SetLiveRecording(bool recording)
   int retval = 0;
   Lock();
   retval = cmyth_recorder_set_live_recording(*m_recorder_t, (recording ? 1 : 0));
+  // Check feedback (Response == Request ?) then track it
+  if (recording && retval == 1)
+    m_liveRecording = true;
+  else if (!recording && retval == 0)
+    m_liveRecording = false;
   Unlock();
-  // Track it
-  m_liveRecording = (retval == 1);
   return retval >= 0;
 }
 
