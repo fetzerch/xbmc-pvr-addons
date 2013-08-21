@@ -998,6 +998,7 @@ bool PVRClientMythTV::KeepLiveTVRecording(MythProgramInfo &programInfo, bool kee
     m_recordingsLock.Unlock();
     return true;
   }
+  XBMC->Log(LOG_ERROR, "%s - Failed to keep live recording '%s'", __FUNCTION__, (keep ? "true" : "false"));
   return false;
 }
 
@@ -1200,7 +1201,7 @@ PVR_ERROR PVRClientMythTV::AddTimer(const PVR_TIMER &timer)
       if (KeepLiveTVRecording(currentProgram, true) && m_rec.SetLiveRecording(true))
         return PVR_ERROR_NO_ERROR;
       else
-        return PVR_ERROR_FAILED;
+        return PVR_ERROR_NO_ERROR; // !!!No notification. PVR locks on failed!!!
     }
   }
   lock.Unlock();
