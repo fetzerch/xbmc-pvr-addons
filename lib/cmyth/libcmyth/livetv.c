@@ -998,7 +998,8 @@ cmyth_livetv_chain_seek(cmyth_recorder_t rec, int64_t offset, int8_t whence)
 			for (; cur > 0; cur--) {
 				offset += chain->chain_files[cur-1]->file_length;
 			}
-			return offset;
+			ret = offset;
+			goto out;
 		} else {
 			cur = chain->chain_current;
 			fp  = chain->chain_files[cur];
@@ -1009,15 +1010,19 @@ cmyth_livetv_chain_seek(cmyth_recorder_t rec, int64_t offset, int8_t whence)
 		while (offset > fp->file_length) {
 			cur++;
 			offset -= fp->file_length;
-			if (cur == ct)
-				return -1;
+			if (cur == ct) {
+				ret = -1;
+				goto out;
+			}
 			fp = chain->chain_files[cur];
 		}
 
 		while (offset < 0) {
 			cur--;
-			if (cur < 0)
-				return -1;
+			if (cur < 0) {
+				ret = -1;
+				goto out;
+			}
 			fp = chain->chain_files[cur];
 			offset += fp->file_length;
 		}
@@ -1040,6 +1045,8 @@ cmyth_livetv_chain_seek(cmyth_recorder_t rec, int64_t offset, int8_t whence)
 			}
 		}
 	}
+
+	out:
 
 	ref_release(rec);
 	ref_release(chain);
