@@ -83,11 +83,10 @@ public:
   void HandleRecordingListChangeAdd(const CStdString &buffer);
   void HandleRecordingListChangeUpdate(const CStdString &buffer, MythProgramInfo &programInfo);
   void HandleRecordingListChangeDelete(const CStdString &buffer);
-  void HandleRecordingListChange(const CStdString &buffer);
+  void HandleRecordingListChange();
 
   void RetryConnect();
   bool TryReconnect();
-  void RecordingListChange();
 
   // Data
   CStdString m_server;
@@ -238,7 +237,7 @@ void *MythEventHandler::MythEventHandlerPrivate::Process()
 
       else if (myth_event == CMYTH_EVENT_RECORDING_LIST_CHANGE)
       {
-        HandleRecordingListChange(databuf);
+        HandleRecordingListChange();
         recordingChangeEvent = true;
       }
 
@@ -521,9 +520,8 @@ void MythEventHandler::MythEventHandlerPrivate::HandleRecordingListChangeDelete(
   }
 }
 
-void MythEventHandler::MythEventHandlerPrivate::HandleRecordingListChange(const CStdString& buffer)
+void MythEventHandler::MythEventHandlerPrivate::HandleRecordingListChange()
 {
-  (void)buffer;
   CLockObject lock(m_lock);
   m_recordingChangeEventList.push_back(RecordingChangeEvent(CHANGE_ALL));
   m_recordingChangePinCount = -1; // Trigger observer anyway
@@ -549,7 +547,7 @@ void MythEventHandler::MythEventHandlerPrivate::RetryConnect()
       XBMC->Log(LOG_NOTICE, "%s - Connected client to event socket", __FUNCTION__);
       XBMC->QueueNotification(QUEUE_INFO, XBMC->GetLocalizedString(30303)); // MythTV backend available
       m_hang = false;
-      RecordingListChange();
+      HandleRecordingListChange(); // Reload all recordings
       break;
     }
   }
