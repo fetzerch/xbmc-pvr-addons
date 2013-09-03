@@ -42,6 +42,8 @@ public:
   MythProgramInfo(cmyth_proginfo_t cmyth_proginfo);
 
   bool IsNull() const;
+  bool operator ==(MythProgramInfo &other);
+  bool operator !=(MythProgramInfo &other);
 
   CStdString UID();
   CStdString ProgramID();
@@ -57,6 +59,7 @@ public:
   bool IsDeletePending();
   bool HasBookmark();
   bool IsVisible();
+  bool IsLiveTV();
 
   unsigned int ChannelID();
   CStdString ChannelName();

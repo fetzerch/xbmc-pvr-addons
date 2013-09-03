@@ -46,6 +46,18 @@ bool MythProgramInfo::IsNull() const
   return *m_proginfo_t == NULL;
 }
 
+bool MythProgramInfo::operator ==(MythProgramInfo &other)
+{
+  if (!this->IsNull() && !other.IsNull() && this->UID() == other.UID())
+    return true;
+  return false;
+}
+
+bool MythProgramInfo::operator !=(MythProgramInfo &other)
+{
+  return !(*this == other);
+}
+
 CStdString MythProgramInfo::UID()
 {
   // Creates unique IDs from ChannelID, StartTime and RecordID like "100_2011-12-10T12:00:00_247"
@@ -145,17 +157,27 @@ bool MythProgramInfo::HasBookmark()
 
 bool MythProgramInfo::IsVisible()
 {
-  // Filter out recording of special storage groups (like LiveTV or Deleted)
-
+  // Filter out recording of special storage group Deleted
+  // Filter out recording with duration less than 5 seconds
   // When  deleting a recording, it might not be deleted immediately but marked as 'pending delete'.
   // Depending on the protocol version the recording is moved to the group Deleted or
   // the 'delete pending' flag is set
-  if (RecordingGroup() == "LiveTV" || RecordingGroup() == "Deleted" || IsDeletePending())
+  if (Duration() < 5 || RecordingGroup() == "Deleted" || IsDeletePending())
   {
     return false;
   }
 
   return true;
+}
+
+bool MythProgramInfo::IsLiveTV()
+{
+  if (RecordingGroup() == "LiveTV")
+  {
+    return true;
+  }
+
+  return false;
 }
 
 unsigned int MythProgramInfo::ChannelID()

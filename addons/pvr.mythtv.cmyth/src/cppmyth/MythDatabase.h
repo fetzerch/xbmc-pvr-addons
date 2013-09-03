@@ -71,7 +71,7 @@ public:
   CStdString GetSetting(const CStdString &setting);
 
   bool FindProgram(time_t starttime, int channelid, const CStdString &title, MythEPGInfo &epgInfo);
-  bool FindCurrentProgram(int channelid, MythEPGInfo &epgInfo);
+  bool FindCurrentProgram(time_t attime, int channelid, MythEPGInfo &epgInfo);
   EPGInfoList GetGuide(int channelid, time_t starttime, time_t endtime);
 
   ChannelIdMap GetChannels();
@@ -82,7 +82,7 @@ public:
   RecordingRuleMap GetRecordingRules();
   bool AddRecordingRule(const MythRecordingRule &rule);
   bool UpdateRecordingRule(const MythRecordingRule &rule);
-  bool DeleteRecordingRule(unsigned int recordid);
+  bool DeleteRecordingRule(const MythRecordingRule &rule);
   MythRecordingRule LoadRecordingRuleTemplate(const CStdString &category, const CStdString &category_type);
 
   RecordingProfileList GetRecordingProfiles();
@@ -94,6 +94,7 @@ public:
   long long GetRecordingFrameRate(const MythProgramInfo &recording);
 
   bool FillRecordingArtwork(MythProgramInfo &recording);
+  bool KeepLiveTVRecording(MythProgramInfo &recording, bool keep);
 
 private:
   boost::shared_ptr<MythPointerThreadSafe<cmyth_database_t> > m_database_t;
