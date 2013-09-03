@@ -204,7 +204,8 @@ MythScheduleManager::MSM_ERROR MythScheduleManager::DeleteRecording(unsigned int
     XBMC->Log(LOG_DEBUG, "%s - Delete recording rule %u", __FUNCTION__, node->m_rule.RecordID());
     if (!m_db.DeleteRecordingRule(node->m_rule))
       XBMC->Log(LOG_ERROR, "%s - Delete recording rule failed", __FUNCTION__);
-    m_con.UpdateSchedules(-1);
+    if (!m_con.UpdateSchedules(-1))
+      return MSM_ERROR_FAILED;
     return MSM_ERROR_SUCCESS;
   }
   else
