@@ -174,6 +174,18 @@ bool MythProgramInfo::HasBookmark()
   return (recording_flags & 0x00000010) != 0; // FL_BOOKMARK
 }
 
+CStdString MythProgramInfo::EpisodeString()
+{
+  CStdString ret;
+
+  unsigned int season = cmyth_proginfo_season(*m_proginfo_t);
+  unsigned int episode = cmyth_proginfo_episode(*m_proginfo_t);
+  if (season > 0 && episode > 0)
+    ret.Format("S%02uE%02u", season, episode);
+
+  return ret;
+}
+
 bool MythProgramInfo::IsVisible()
 {
   // Filter out recording of special storage group Deleted

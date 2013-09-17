@@ -484,6 +484,9 @@ PVR_ERROR PVRClientMythTV::GetRecordings(ADDON_HANDLE handle)
 
       CStdString id = it->second.UID();
       CStdString title = this->MakeProgramTitle(it->second.Title(), it->second.Subtitle());
+      CStdString episode = it->second.EpisodeString();
+      if (!episode.IsEmpty())
+        title += " - " + episode;
 
       PVR_STRCPY(tag.strRecordingId, id);
       PVR_STRCPY(tag.strTitle, title);

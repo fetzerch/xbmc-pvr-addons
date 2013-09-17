@@ -69,6 +69,7 @@ public:
   bool IsWatched();
   bool IsDeletePending();
   bool HasBookmark();
+  CStdString EpisodeString();
   bool IsVisible();
   bool IsLiveTV();
 
