@@ -92,6 +92,8 @@ public:
 
   long long GetRecordingMarkup(const MythProgramInfo &recording, int type);
   long long GetRecordingFrameRate(const MythProgramInfo &recording);
+  
+  long long GetPositionMapByMark(const MythProgramInfo &recording, long long mark);
 
   bool FillRecordingArtwork(MythProgramInfo &recording);
   bool KeepLiveTVRecording(MythProgramInfo &recording, bool keep);

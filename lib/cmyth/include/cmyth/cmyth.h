@@ -2427,4 +2427,6 @@ extern int cmyth_mysql_get_prog_finder_time_title_chan(cmyth_database_t db, cmyt
 extern int cmyth_mysql_get_guide(cmyth_database_t db, cmyth_epginfolist_t *epglist, uint32_t chanid, time_t starttime, time_t endtime);
 extern int cmyth_mysql_get_prev_recorded(cmyth_database_t db, cmyth_epginfolist_t *epglist);
 
+extern int64_t cmyth_mysql_get_position_map_by_mark(cmyth_database_t db, cmyth_proginfo_t prog, int64_t mark);
+
 #endif /* __CMYTH_H */

@@ -898,9 +898,27 @@ PVR_ERROR PVRClientMythTV::GetRecordingEdl(const PVR_RECORDING &recording, PVR_E
   {
     if (index < *size)
     {
+	  // Pull the closest match in the DB if it exists
+	  int64_t start = m_db.GetPositionMapByMark(it->second, edlIt->start_mark);
+	  int64_t end = 0;
+	  if (start >= 0) {
+	    end = m_db.GetPositionMapByMark(it->second, edlIt->end_mark);
+		XBMC->Log(LOG_DEBUG, "%s: found recorded map!", __FUNCTION__);
+		// Print out the values:
+		// start/end_mark: the mark lookup value
+		// start/end: the ms of the start and end of the time frame
+		// bad_start/end: the comparision to the constant frame rate value math
+		XBMC->Log(LOG_DEBUG, "start_mark: %lld, end_mark: %lld, start: %lld, end: %lld, bad_start: %lld, bad_end: %lld", edlIt->start_mark, edlIt->end_mark,start, end, (int64_t)(edlIt->start_mark / frameRate * 1000), (int64_t)(edlIt->end_mark / frameRate * 1000));
+	  } else {
+	    start = (int64_t)(edlIt->start_mark / frameRate * 1000);
+		end = (int64_t)(edlIt->end_mark / frameRate * 1000);
+		XBMC->Log(LOG_DEBUG, "%s: missing recorded map, try running 'mythcommflag --rebuild' for this recording", __FUNCTION__);
+		XBMC->Log(LOG_DEBUG, "start_mark: %lld, end_mark: %lld, start: %lld, end: %lld", edlIt->start_mark, edlIt->end_mark, start, end);
+	  }
+	  
       PVR_EDL_ENTRY entry;
-      entry.start = (int64_t)(edlIt->start_mark / frameRate * 1000);
-      entry.end = (int64_t)(edlIt->end_mark / frameRate * 1000);
+      entry.start = start;
+      entry.end = end;
       entry.type = index < commbreakCount ? PVR_EDL_TYPE_COMBREAK : PVR_EDL_TYPE_CUT;
       entries[index] = entry;
       index++;

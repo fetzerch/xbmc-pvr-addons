@@ -288,6 +288,13 @@ long long MythDatabase::GetRecordingFrameRate(const MythProgramInfo &recording)
   return value;
 }
 
+long long MythDatabase::GetPositionMapByMark(const MythProgramInfo &recording, long long mark)
+{
+  long long value = 0;
+  CMYTH_DB_CALL(value, value < 0 && value != -2, cmyth_mysql_get_position_map_by_mark(*m_database_t, *recording.m_proginfo_t, mark));
+  return value;
+}
+
 bool MythDatabase::FillRecordingArtwork(MythProgramInfo &recording)
 {
   int retval = 0;
