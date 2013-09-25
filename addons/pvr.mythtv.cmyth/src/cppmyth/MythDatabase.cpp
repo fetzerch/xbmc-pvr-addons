@@ -314,3 +314,17 @@ bool MythDatabase::KeepLiveTVRecording(MythProgramInfo& recording, bool keep)
   return (retval > 0);
 }
 
+int MythDatabase::GetRecordingSeekOffset(const MythProgramInfo &recording, long long mark, long long *psoffset, long long *nsoffset)
+{
+  // type default is 9, overloaded here for compatibility with janbar's repository
+  return GetRecordingSeekOffset(recording, (long long) 9, mark, (int64_t*)psoffset, (int64_t*)nsoffset);
+}
+
+int MythDatabase::GetRecordingSeekOffset(const MythProgramInfo &recording, long long type, long long mark, long long *psoffset, long long *nsoffset)
+{
+  int mask = 0;
+
+  CMYTH_DB_CALL(mask, mask < 0, cmyth_mysql_get_recording_seek_offset(*m_database_t, *recording.m_proginfo_t, type, mark, (int64_t*)psoffset, (int64_t*)nsoffset));
+  return mask;
+}
+

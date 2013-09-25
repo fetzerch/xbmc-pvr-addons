@@ -1257,6 +1257,8 @@ extern cmyth_commbreaklist_t cmyth_get_commbreaklist(cmyth_conn_t conn, cmyth_pr
 extern cmyth_commbreaklist_t cmyth_get_cutlist(cmyth_conn_t conn, cmyth_proginfo_t prog);
 extern int cmyth_rcv_commbreaklist(cmyth_conn_t conn, int *err, cmyth_commbreaklist_t breaklist, int count);
 
+extern int8_t cmyth_mysql_get_recording_seek_offset(cmyth_database_t db, cmyth_proginfo_t prog, int64_t type, int64_t mark, int64_t *psoffset, int64_t *nsoffset);
+
 /*
  * -----------------------------------------------------------------
  * Recording Groups Operations
@@ -2426,5 +2428,7 @@ extern int cmyth_mysql_get_prog_finder_chan(cmyth_database_t db, cmyth_epginfo_t
 extern int cmyth_mysql_get_prog_finder_time_title_chan(cmyth_database_t db, cmyth_epginfo_t *epg, time_t starttime, char *program_name, uint32_t chanid);
 extern int cmyth_mysql_get_guide(cmyth_database_t db, cmyth_epginfolist_t *epglist, uint32_t chanid, time_t starttime, time_t endtime);
 extern int cmyth_mysql_get_prev_recorded(cmyth_database_t db, cmyth_epginfolist_t *epglist);
+
+extern int64_t cmyth_mysql_get_position_map_by_mark(cmyth_database_t db, cmyth_proginfo_t prog, int64_t mark);
 
 #endif /* __CMYTH_H */
