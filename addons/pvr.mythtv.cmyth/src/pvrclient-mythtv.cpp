@@ -892,30 +892,82 @@ PVR_ERROR PVRClientMythTV::GetRecordingEdl(const PVR_RECORDING &recording, PVR_E
 
   commbreakList.insert(commbreakList.end(), cutList.begin(), cutList.end());
 
+  int dbSchema = m_db.GetSchemaVersion();
+  XBMC->Log(LOG_DEBUG, "%s: dbSchema: %d", __FUNCTION__, dbSchema);
+
   int index = 0;
   Edl::const_iterator edlIt;
   for (edlIt = commbreakList.begin(); edlIt != commbreakList.end(); ++edlIt)
   {
     if (index < *size)
     {
-	  // Pull the closest match in the DB if it exists
-	  int64_t start = m_db.GetPositionMapByMark(it->second, edlIt->start_mark);
-	  int64_t end = 0;
-	  if (start >= 0) {
-	    end = m_db.GetPositionMapByMark(it->second, edlIt->end_mark);
-		XBMC->Log(LOG_DEBUG, "%s: found recorded map!", __FUNCTION__);
-		// Print out the values:
-		// start/end_mark: the mark lookup value
-		// start/end: the ms of the start and end of the time frame
-		// bad_start/end: the comparision to the constant frame rate value math
-		XBMC->Log(LOG_DEBUG, "start_mark: %lld, end_mark: %lld, start: %lld, end: %lld, bad_start: %lld, bad_end: %lld", edlIt->start_mark, edlIt->end_mark,start, end, (int64_t)(edlIt->start_mark / frameRate * 1000), (int64_t)(edlIt->end_mark / frameRate * 1000));
-	  } else {
-	    start = (int64_t)(edlIt->start_mark / frameRate * 1000);
-		end = (int64_t)(edlIt->end_mark / frameRate * 1000);
-		XBMC->Log(LOG_DEBUG, "%s: missing recorded map, try running 'mythcommflag --rebuild' for this recording", __FUNCTION__);
-		XBMC->Log(LOG_DEBUG, "start_mark: %lld, end_mark: %lld, start: %lld, end: %lld", edlIt->start_mark, edlIt->end_mark, start, end);
-	  }
-	  
+      int64_t start, end, psoffset, nsoffset;
+      int retval;
+
+      retval = start = end = psoffset = nsoffset = 0;
+
+      // Pull the closest match in the DB if it exists
+      if (dbSchema >= 1309) {
+        if (edlIt->start_mark == 0) {
+          XBMC->Log(LOG_DEBUG, "%s: start_mark is zero", __FUNCTION__);
+          start = 0;
+        } else {
+          retval = m_db.GetRecordingSeekOffset(it->second, (int64_t)33, edlIt->start_mark, &psoffset, &nsoffset);
+          XBMC->Log(LOG_DEBUG, "%s: start_mark offset retval: %d", __FUNCTION__, retval);
+          if (retval > 0) {
+             // retval == 1 ==> Found before the mark (use psoffset, nsoffset is zero)
+             // retval == 2 ==> Found after the mark (use nsoffset, psoffset is zero)
+             // retval == 3 ==> Found around the mark (use nsoffset [next offset / later] for start, psoffset [prev. offset / before] for end)
+            if (retval == 1)
+              start = psoffset;
+            else if (retval == 2 || retval == 3)
+              start = nsoffset;
+
+            XBMC->Log(LOG_DEBUG, "%s: start_mark psoffset: %d, nsoffset: %d", __FUNCTION__, psoffset, nsoffset);
+          }
+        }
+
+        psoffset = nsoffset = 0;
+
+        // Check if we skipped the start value (for zeros) or if we had a successful lookup, not doing this twice if not needed
+        if (edlIt->start_mark == 0 || retval > 0) {
+          retval = m_db.GetRecordingSeekOffset(it->second, (int64_t)33, edlIt->end_mark, &psoffset, &nsoffset);
+          XBMC->Log(LOG_DEBUG, "%s: end_mark offset retval: %d", __FUNCTION__, retval);
+          if (retval > 0) {
+            if (retval == 1 || retval == 3)
+              end = psoffset;
+            else if (retval == 2)
+              end = nsoffset;
+
+            XBMC->Log(LOG_DEBUG, "%s: end_mark psoffset: %d, nsoffset: %d", __FUNCTION__, psoffset, nsoffset);
+
+            if (start < end) {
+              // We have both a valid start and end value now, log it out
+              XBMC->Log(LOG_DEBUG, "%s: found recordedseek map!", __FUNCTION__);
+
+              // Print out the values:
+              // start/end_mark: the mark lookup value
+              // start/end: the ms of the start and end of the time frame
+              // bad_start/end: the comparision to the constant frame rate value math
+              XBMC->Log(LOG_DEBUG, "%s: start_mark: %lld, end_mark: %lld, start: %lld, end: %lld, bad_start: %lld, bad_end: %lld", __FUNCTION__, edlIt->start_mark, edlIt->end_mark,start, end, (int64_t)(edlIt->start_mark / frameRate * 1000), (int64_t)(edlIt->end_mark / frameRate * 1000));
+            } else
+              XBMC->Log(LOG_DEBUG, "%s: invalid start and end values: start_mark: %lld, end_mark: %lld, start: %lld, end: %lld", __FUNCTION__, edlIt->start_mark, edlIt->end_mark,start, end);
+          }
+        } else
+          XBMC->Log(LOG_DEBUG, "%s: failed to retrieve recordedseek offset values", __FUNCTION__);
+      }
+
+      // Double check here that we didn't receive a failure earlier
+      // While we can skip the start_mark if it is zero, end_mark should always have a retval
+      // retval <= 0 means start or end lookup failed
+      if (dbSchema < 1309 || retval <= 0) {
+        start = (int64_t)(edlIt->start_mark / frameRate * 1000);
+        end = (int64_t)(edlIt->end_mark / frameRate * 1000);
+
+        XBMC->Log(LOG_DEBUG, "%s: missing recordedseek map, try running 'mythcommflag --rebuild' for this recording", __FUNCTION__);
+        XBMC->Log(LOG_DEBUG, "%s: start_mark: %lld, end_mark: %lld, start: %lld, end: %lld", __FUNCTION__, edlIt->start_mark, edlIt->end_mark, start, end);
+      }
+
       PVR_EDL_ENTRY entry;
       entry.start = start;
       entry.end = end;

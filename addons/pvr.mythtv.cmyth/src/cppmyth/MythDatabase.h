@@ -92,11 +92,12 @@ public:
 
   long long GetRecordingMarkup(const MythProgramInfo &recording, int type);
   long long GetRecordingFrameRate(const MythProgramInfo &recording);
-  
-  long long GetPositionMapByMark(const MythProgramInfo &recording, long long mark);
 
   bool FillRecordingArtwork(MythProgramInfo &recording);
   bool KeepLiveTVRecording(MythProgramInfo &recording, bool keep);
+
+  int GetRecordingSeekOffset(const MythProgramInfo &recording, long long mark, long long *psoffset, long long *nsoffset);
+  int GetRecordingSeekOffset(const MythProgramInfo &recording, long long type, long long mark, long long *psoffset, long long *nsoffset);
 
 private:
   boost::shared_ptr<MythPointerThreadSafe<cmyth_database_t> > m_database_t;

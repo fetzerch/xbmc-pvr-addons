@@ -2291,29 +2291,39 @@ int cmyth_mysql_keep_livetv_recording(cmyth_database_t db, cmyth_proginfo_t prog
 }
 
 /*
- * cmyth_mysql_get_position_map_by_mark()
+ * cmyth_mysql_get_recording_seek_offset()
  *
- * Scope: PRIVATE
+ * Scope: PUBLIC
  *
  * Description
  *
- * Get mark type 33 from recordedseek table which is a position map of closest ms to frames
+ * Returns seek offsets around the mark
  *
- * Success: returns ms offset or -2 on no offset
+ * Success:
+ * 0 = None
+ * 1 = Found before the mark
+ * 2 = Found after the mark
+ * 3 = Found around the mark
  *
  * Failure: -1
  */
-int64_t
-cmyth_mysql_get_position_map_by_mark(cmyth_database_t db, cmyth_proginfo_t prog, int64_t mark)
+int8_t
+cmyth_mysql_get_recording_seek_offset(cmyth_database_t db, cmyth_proginfo_t prog, int64_t type, int64_t mark, int64_t *psoffset, int64_t *nsoffset)
 {
 	MYSQL_RES *res = NULL;
 	MYSQL_ROW row;
 	/*
-	 * Determine the closest known ms mark in the database may go over or under the mark
+	 * Force usage of primary key index to retrieve mark value:
+	 * const DESC, const DESC, const DESC
 	 */
-	const char *query_str = "SELECT offset FROM recordedseek WHERE chanid = ? AND starttime = ? AND type = 33 ORDER BY ABS(? - CAST(mark AS SIGNED)) ASC LIMIT 1;";
-	int rows = 0;
-	int64_t offset = 0;
+	const char *query_str1 = "SELECT mark,offset FROM recordedseek WHERE chanid = ? AND starttime = ? AND type = ? AND mark >= ? ORDER BY chanid ASC, starttime ASC, type ASC, mark ASC LIMIT 1;";
+	const char *query_str2 = "SELECT mark,offset FROM recordedseek WHERE chanid = ? AND starttime = ? AND type = ? AND mark <= ? ORDER BY chanid DESC, starttime DESC, type DESC, mark DESC LIMIT 1;";
+	int64_t next_mark = 0;
+	int64_t next_offset = 0;
+	int64_t prev_mark = 0;
+	int64_t prev_offset = 0;
+	uint8_t mask = 0;
+	int64_t offset;
 	time_t start_ts_dt;
 	cmyth_mysql_query_t * query;
 
@@ -2321,12 +2331,13 @@ cmyth_mysql_get_position_map_by_mark(cmyth_database_t db, cmyth_proginfo_t prog,
 		return -1;
 
 	start_ts_dt = cmyth_timestamp_to_unixtime(prog->proginfo_rec_start_ts);
-	
-	query = cmyth_mysql_query_create(db, query_str);
+
+	query = cmyth_mysql_query_create(db, query_str1);
 
 	if (cmyth_mysql_query_param_uint32(query, prog->proginfo_chanId) < 0
 			|| cmyth_mysql_query_param_unixtime(query, start_ts_dt, db->db_tz_utc) < 0
-			|| cmyth_mysql_query_param_uint32(query, mark) < 0) {
+			|| cmyth_mysql_query_param_int64(query, type) < 0
+			|| cmyth_mysql_query_param_int64(query, mark) < 0) {
 		cmyth_dbg(CMYTH_DBG_ERROR, "%s, binding of query parameters failed! Maybe we're out of memory?\n", __FUNCTION__);
 		ref_release(query);
 		return -1;
@@ -2334,22 +2345,52 @@ cmyth_mysql_get_position_map_by_mark(cmyth_database_t db, cmyth_proginfo_t prog,
 	res = cmyth_mysql_query_result(query);
 	ref_release(query);
 	if (res == NULL) {
-		cmyth_dbg(CMYTH_DBG_ERROR, "%s, finalisation/execution of query failed!\n", __FUNCTION__);
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s, finalisation/execution of query 1 failed!\n", __FUNCTION__);
 		return -1;
 	}
 	while ((row = mysql_fetch_row(res))) {
-		offset = safe_atoll(row[0]);
-		rows++;
+		next_mark = safe_atoll(row[0]);
+		next_offset = safe_atoll(row[1]);
+		mask |= 1;
 	}
 	mysql_free_result(res);
 
-	/*
-	* Return 0 if there is no offset
-	*/
-	if (offset >= 0) {
-		return offset;
-	}
-	
-	return -2;
-}
+	query = cmyth_mysql_query_create(db, query_str2);
 
+	if (cmyth_mysql_query_param_uint32(query, prog->proginfo_chanId) < 0
+			|| cmyth_mysql_query_param_unixtime(query, start_ts_dt, db->db_tz_utc) < 0
+			|| cmyth_mysql_query_param_int64(query, type) < 0
+			|| cmyth_mysql_query_param_int64(query, mark) < 0) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s, binding of query parameters failed! Maybe we're out of memory?\n", __FUNCTION__);
+		ref_release(query);
+		return -1;
+	}
+	res = cmyth_mysql_query_result(query);
+	ref_release(query);
+	if (res == NULL) {
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s, finalisation/execution of query 2 failed!\n", __FUNCTION__);
+		return -1;
+	}
+	while ((row = mysql_fetch_row(res))) {
+		prev_mark = safe_atoll(row[0]);
+		prev_offset = safe_atoll(row[1]);
+		mask |= 2;
+	}
+	mysql_free_result(res);
+
+	if (mask == 3) {
+		*psoffset = prev_offset;
+		*nsoffset = next_offset;
+	} else if (mask == 1) {
+		*psoffset = next_offset;
+		*nsoffset = 0;
+	} else if (mask == 2) {
+		*psoffset = 0;
+		*nsoffset = prev_offset;
+	} else {
+		*psoffset = 0;
+		*nsoffset = 0;
+	}
+
+	return mask;
+}

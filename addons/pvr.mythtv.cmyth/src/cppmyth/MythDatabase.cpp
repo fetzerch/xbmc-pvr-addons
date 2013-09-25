@@ -288,13 +288,6 @@ long long MythDatabase::GetRecordingFrameRate(const MythProgramInfo &recording)
   return value;
 }
 
-long long MythDatabase::GetPositionMapByMark(const MythProgramInfo &recording, long long mark)
-{
-  long long value = 0;
-  CMYTH_DB_CALL(value, value < 0 && value != -2, cmyth_mysql_get_position_map_by_mark(*m_database_t, *recording.m_proginfo_t, mark));
-  return value;
-}
-
 bool MythDatabase::FillRecordingArtwork(MythProgramInfo &recording)
 {
   int retval = 0;
@@ -319,5 +312,19 @@ bool MythDatabase::KeepLiveTVRecording(MythProgramInfo& recording, bool keep)
   int retval = 0;
   CMYTH_DB_CALL(retval, retval < 0, cmyth_mysql_keep_livetv_recording(*m_database_t, *recording.m_proginfo_t, (keep ? 1 : 0)));
   return (retval > 0);
+}
+
+int MythDatabase::GetRecordingSeekOffset(const MythProgramInfo &recording, long long mark, long long *psoffset, long long *nsoffset)
+{
+  // type default is 9, overloaded here for compatibility with janbar's repository
+  return GetRecordingSeekOffset(recording, (long long) 9, mark, (int64_t*)psoffset, (int64_t*)nsoffset);
+}
+
+int MythDatabase::GetRecordingSeekOffset(const MythProgramInfo &recording, long long type, long long mark, long long *psoffset, long long *nsoffset)
+{
+  int mask = 0;
+
+  CMYTH_DB_CALL(mask, mask < 0, cmyth_mysql_get_recording_seek_offset(*m_database_t, *recording.m_proginfo_t, type, mark, (int64_t*)psoffset, (int64_t*)nsoffset));
+  return mask;
 }
 
