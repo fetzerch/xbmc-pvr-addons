@@ -90,11 +90,13 @@ public:
   bool SetWatchedStatus(const MythProgramInfo &recording, bool watched);
   long long GetBookmarkMark(const MythProgramInfo &recording, long long bk, int mode);
 
-  long long GetRecordingMarkup(const MythProgramInfo &recording, int type);
+  long long GetRecordingMarkup(const MythProgramInfo &recording, cmyth_recording_markup_t type);
   long long GetRecordingFrameRate(const MythProgramInfo &recording);
 
   bool FillRecordingArtwork(MythProgramInfo &recording);
   bool KeepLiveTVRecording(MythProgramInfo &recording, bool keep);
+
+  int GetRecordingSeekOffset(const MythProgramInfo &recording, cmyth_recording_markup_t type, int64_t mark, int64_t *psoffset, int64_t *nsoffset);
 
 private:
   boost::shared_ptr<MythPointerThreadSafe<cmyth_database_t> > m_database_t;

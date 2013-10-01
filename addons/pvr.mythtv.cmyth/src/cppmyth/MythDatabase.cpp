@@ -274,10 +274,10 @@ long long MythDatabase::GetBookmarkMark(const MythProgramInfo &recording, long l
   return mark;
 }
 
-long long MythDatabase::GetRecordingMarkup(const MythProgramInfo &recording, int type)
+long long MythDatabase::GetRecordingMarkup(const MythProgramInfo &recording, cmyth_recording_markup_t type)
 {
   long long value = 0;
-  CMYTH_DB_CALL(value, value < 0, cmyth_mysql_get_recording_markup(*m_database_t, *recording.m_proginfo_t, (cmyth_recording_markup_t)type));
+  CMYTH_DB_CALL(value, value < 0, cmyth_mysql_get_recording_markup(*m_database_t, *recording.m_proginfo_t, type));
   return value;
 }
 
@@ -314,3 +314,9 @@ bool MythDatabase::KeepLiveTVRecording(MythProgramInfo& recording, bool keep)
   return (retval > 0);
 }
 
+int MythDatabase::GetRecordingSeekOffset(const MythProgramInfo &recording, cmyth_recording_markup_t type, int64_t mark, int64_t *psoffset, int64_t *nsoffset)
+{
+  int mask = 0;
+  CMYTH_DB_CALL(mask, mask < 0, cmyth_mysql_get_recording_seek_offset(*m_database_t, *recording.m_proginfo_t, type, mark, psoffset, nsoffset));
+  return mask;
+}
