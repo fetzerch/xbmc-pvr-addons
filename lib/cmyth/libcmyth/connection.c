@@ -368,7 +368,7 @@ cmyth_reconnect_addr(cmyth_conn_t conn, struct addrinfo* addr)
 #endif
 	my_fd = fd;
 	if (connect(fd, addr->ai_addr, addr->ai_addrlen) < 0) {
-		cmyth_dbg(CMYTH_DBG_ERROR, "%s: connect failed on port %"PRIu16" to '%s' (%d)\n",
+		cmyth_dbg(CMYTH_DBG_ERROR, "%s: connect failed to '%s' on port %"PRIu16" (%d)\n",
 			  __FUNCTION__, conn->server, conn->port, errno);
 		closesocket(fd);
 #ifndef _MSC_VER
