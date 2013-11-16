@@ -368,6 +368,32 @@ static inline int stream_identifier(int composition_id, int ancillary_id)
     | ((ancillary_id & 0xff) << 24);
 }
 
+static void recode_language(const char* muxLanguage, char* strLanguage)
+{
+  /*
+   * While XBMC does'nt support them.
+   * Fix unsupported language codes (EN 300 468 Annex F & J)
+   * 'qaa'        : Original audio
+   * 'qad','NAR'  : Audio Description
+   */
+  if (strncmp(muxLanguage, "qaa", 3) == 0 ||
+      strncmp(muxLanguage, "qad", 3) == 0 ||
+      strncmp(muxLanguage, "NAR", 3) == 0)
+  {
+    strLanguage[0] = 0;
+    strLanguage[1] = 0;
+    strLanguage[2] = 0;
+    strLanguage[3] = 0;
+  }
+  else
+  {
+    strLanguage[0] = muxLanguage[0];
+    strLanguage[1] = muxLanguage[1];
+    strLanguage[2] = muxLanguage[2];
+    strLanguage[3] = 0;
+  }
+}
+
 void Demux::populate_pvr_streams()
 {
   CLockObject Lock(m_mutex);
@@ -385,10 +411,7 @@ void Demux::populate_pvr_streams()
 
       new_stream.iCodecId       = codec.codec_id;
       new_stream.iCodecType     = codec.codec_type;
-      new_stream.strLanguage[0] = (*it)->stream_info.language[0];
-      new_stream.strLanguage[1] = (*it)->stream_info.language[1];
-      new_stream.strLanguage[2] = (*it)->stream_info.language[2];
-      new_stream.strLanguage[3] = (*it)->stream_info.language[3];
+      recode_language((*it)->stream_info.language, new_stream.strLanguage);
       new_stream.iIdentifier    = stream_identifier((*it)->stream_info.composition_id, (*it)->stream_info.ancillary_id);
       new_stream.iFPSScale      = (*it)->stream_info.fps_scale;
       new_stream.iFPSRate       = (*it)->stream_info.fps_rate;
@@ -431,10 +454,7 @@ bool Demux::update_pvr_stream(uint16_t pid)
   PVR_STREAM_PROPERTIES::PVR_STREAM* stream = m_streams.GetStreamById(es->pid);
   if (stream)
   {
-    stream->strLanguage[0] = es->stream_info.language[0];
-    stream->strLanguage[1] = es->stream_info.language[1];
-    stream->strLanguage[2] = es->stream_info.language[2];
-    stream->strLanguage[3] = es->stream_info.language[3];
+    recode_language(es->stream_info.language, stream->strLanguage);
     stream->iIdentifier    = stream_identifier(es->stream_info.composition_id, es->stream_info.ancillary_id);
     stream->iFPSScale      = es->stream_info.fps_scale;
     stream->iFPSRate       = es->stream_info.fps_rate;
