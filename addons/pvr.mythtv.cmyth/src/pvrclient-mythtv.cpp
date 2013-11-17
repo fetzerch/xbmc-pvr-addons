@@ -493,10 +493,11 @@ PVR_ERROR PVRClientMythTV::GetRecordings(ADDON_HANDLE handle)
       tag.iGenreSubType = genre&0x0F;
       tag.iGenreType = genre&0xF0;
 
+      // TODO:
       // Add recording title to directory to group everything according to its name just like MythTV does
-      CStdString strDirectory;
-      strDirectory.Format("%s/%s", it->second.RecordingGroup(), it->second.Title());
-      PVR_STRCPY(tag.strDirectory, strDirectory);
+      //CStdString strDirectory;
+      //strDirectory.Format("%s/%s", it->second.RecordingGroup(), it->second.Title());
+      PVR_STRCPY(tag.strDirectory, it->second.RecordingGroup());
 
       // Images
       CStdString strIconPath;
