@@ -319,7 +319,7 @@ int AVContext::ProcessTSPacket()
     return AVCONTEXT_TS_NOSYNC;
 
   uint16_t header = av_rb16(this->av_buf + 1);
-  this->pid = (header & 0x1fff) != 0;
+  this->pid = header & 0x1fff;
   this->transport_error = (header & 0x8000) != 0;
   this->payload_unit_start = (header & 0x4000) != 0;
   // Cleaning context
@@ -337,7 +337,7 @@ int AVContext::ProcessTSPacket()
   uint8_t flags = av_rb8(this->av_buf + 3);
   bool has_payload = (flags & 0x10) != 0;
   bool is_discontinuity = false;
-  uint8_t continuity_counter = (flags & 0x0f) != 0;
+  uint8_t continuity_counter = flags & 0x0f;
   bool has_adaptation = (flags & 0x20) != 0;
   size_t n = 0;
   if (has_adaptation)
