@@ -29,7 +29,7 @@ extern "C" {
 };
 
 #define LOGTAG                  "[DEMUX] "
-#define POSMAP_PTS_INTERVAL     270000LL    // 3 secs
+#define POSMAP_PTS_INTERVAL     (PTS_TIME_BASE * 2)       // 2 secs
 
 using namespace PLATFORM;
 using namespace ADDON;
@@ -257,41 +257,58 @@ DemuxPacket* Demux::Read()
 
 bool Demux::SeekTime(int time, bool backwards, double* startpts)
 {
-  (void)backwards;
-  // Rescale time to PTS (90Khz)
-  uint64_t pts = (uint64_t)((time / 1000) * PTS_TIME_BASE);
+  // Current PTS must be valid to estimate offset
+  if (m_PTS == PTS_UNSET)
+    return false;
+  // time is in MSEC not PTS_TIME_BASE. Rescale time to PTS (90Khz)
+  uint64_t pts = (uint64_t)time * PTS_TIME_BASE / 1000;
+  // Compute offset from current PTS
   int64_t offset = (int64_t)(pts - m_PTS);
+  // Limit offset to deal with invalid request or PTS discontinuity
+  // Backwards  : Limiting offset to +6 secs
+  // Forwards   : Limiting offset to -6 secs
+  if (backwards)
+    offset = std::min(offset, (int64_t)(PTS_TIME_BASE * 6));
+  else
+    offset = std::max(offset, (int64_t)(PTS_TIME_BASE * (-6)));
+  // Compute desired time position
   int64_t desired = m_curTime + offset;
 
   CLockObject lock(m_mutex);
 
-  uint64_t new_pos = 0;
-  uint64_t new_pts = 0;
-  int64_t new_time = 0;
   std::map<int64_t, AV_POSMAP_ITEM>::const_iterator it;
   if (offset < 0)
   {
     it = m_posmap.upper_bound(desired);
-    if (it != m_posmap.begin())
+    if (backwards && it != m_posmap.begin())
       --it;
   }
   else
   {
     it = m_posmap.upper_bound(desired);
+    // On end shift back if possible
+    if (it == m_posmap.end() && it != m_posmap.begin())
+      --it;
   }
-  if (it == m_posmap.end())
-    return false;
 
-  new_time = it->first;
-  new_pos = it->second.av_pos;
-  new_pts = it->second.av_pts;
-  XBMC->Log(LOG_DEBUG, LOGTAG"seek to %"PRId64" pts=%"PRIu64, new_time, new_pts);
+  if (g_bExtraDebug)
+    XBMC->Log(LOG_DEBUG, LOGTAG"%s: bw:%d tm:%d tm_pts:%"PRIu64" c_pts:%"PRIu64" offset:%+6.3f c_tm:%+6.3f n_tm:%+6.3f", __FUNCTION__,
+            backwards, time, pts, m_PTS, (double)offset / PTS_TIME_BASE, (double)m_curTime / PTS_TIME_BASE, (double)desired / PTS_TIME_BASE);
 
-  Flush();
-  m_AVContext->GoPosition(new_pos);
-  m_AVContext->ResetPackets();
-  m_curTime = m_pinTime = new_time;
-  m_DTS = m_PTS = new_pts;
+  if (it != m_posmap.end())
+  {
+    int64_t new_time = it->first;
+    uint64_t new_pos = it->second.av_pos;
+    uint64_t new_pts = it->second.av_pts;
+    XBMC->Log(LOG_DEBUG, LOGTAG"seek to %"PRId64" pts=%"PRIu64, new_time, new_pts);
+
+    Flush();
+    m_AVContext->GoPosition(new_pos);
+    m_AVContext->ResetPackets();
+    m_curTime = m_pinTime = new_time;
+    m_DTS = m_PTS = new_pts;
+  }
+
   *startpts = (double)m_PTS * DVD_TIME_BASE / PTS_TIME_BASE;
 
   return true;
