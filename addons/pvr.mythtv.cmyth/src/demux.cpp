@@ -64,15 +64,26 @@ void DemuxLog(int level, char *msg)
 Demux::Demux(MythRecorder &recorder)
   : CThread()
   , m_recorder(recorder)
+  , m_channel(1)
+  , m_av_buf_size(AV_BUFFER_SIZE)
+  , m_av_pos(0)
+  , m_av_buf(NULL)
+  , m_av_rbs(NULL)
+  , m_av_rbe(NULL)
+  , m_AVContext(NULL)
+  , m_mainStreamPID(0xffff)
+  , m_DTS(PTS_UNSET)
+  , m_PTS(PTS_UNSET)
+  , m_pinTime(0)
+  , m_curTime(0)
+  , m_endTime(0)
+  , m_isChangePlaced(false)
 {
-  m_av_buf_size = AV_BUFFER_SIZE;
   m_av_buf = (unsigned char*)malloc(sizeof(*m_av_buf) * (m_av_buf_size + 1));
   if (m_av_buf)
   {
-    m_av_pos = 0;
     m_av_rbs = m_av_buf;
     m_av_rbe = m_av_buf;
-    m_channel = 1;
 
     //if (g_bExtraDebug)
     demux_dbg_level(DEMUX_DBG_DEBUG);
@@ -80,12 +91,7 @@ Demux::Demux(MythRecorder &recorder)
     //  demux_dbg_level(DEMUX_DBG_ERROR);
     demux_set_dbg_msgcallback(DemuxLog);
 
-    m_mainStreamPID = 0xffff;
-    m_DTS = PTS_UNSET;
-    m_PTS = PTS_UNSET;
-    m_pinTime = m_curTime = m_endTime = 0;
-    m_isChangePlaced = false;
-    m_AVContext = new AVContext(this, 0, m_channel);
+    m_AVContext = new AVContext(this, m_av_pos, m_channel);
 
     CreateThread(true);
   }
@@ -168,6 +174,12 @@ const unsigned char* Demux::ReadAV(uint64_t pos, size_t n)
 
 void* Demux::Process()
 {
+  if (!m_AVContext)
+  {
+    XBMC->Log(LOG_ERROR, LOGTAG"%s: no AVContext", __FUNCTION__);
+    return NULL;
+  }
+    
   int ret = 0;
 
   while (!IsStopped())
@@ -212,7 +224,7 @@ void* Demux::Process()
       m_AVContext->GoNext();
   }
 
-  XBMC->Log(LOG_DEBUG,LOGTAG"%s: stopped with status %d", __FUNCTION__, ret);
+  XBMC->Log(LOG_DEBUG, LOGTAG"%s: stopped with status %d", __FUNCTION__, ret);
   return NULL;
 }
 
