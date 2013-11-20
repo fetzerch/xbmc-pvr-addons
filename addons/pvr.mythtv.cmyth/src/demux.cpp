@@ -38,7 +38,7 @@ void DemuxLog(int level, char *msg)
 {
   if (msg && level != DEMUX_DBG_NONE)
   {
-    bool doLog = true;//g_bExtraDebug;
+    bool doLog = g_bExtraDebug;
     addon_log_t loglevel = LOG_DEBUG;
     switch (level)
     {
@@ -179,7 +179,7 @@ void* Demux::Process()
     XBMC->Log(LOG_ERROR, LOGTAG"%s: no AVContext", __FUNCTION__);
     return NULL;
   }
-    
+
   int ret = 0;
 
   while (!IsStopped())
@@ -234,7 +234,8 @@ bool Demux::GetStreamProperties(PVR_STREAM_PROPERTIES* props)
   // Wait until setup is completed for all streams
   while (IsRunning() && !m_nosetup.empty() && wait < 20)
   {
-    XBMC->Log(LOG_DEBUG, LOGTAG"%s: waiting until setup will be completed ...", __FUNCTION__);
+    if (g_bExtraDebug)
+      XBMC->Log(LOG_DEBUG, LOGTAG"%s: waiting until setup will be completed ...", __FUNCTION__);
     usleep(100000);
     wait++;
   }
@@ -457,7 +458,7 @@ void Demux::populate_pvr_streams()
       m_AVContext->StartStreaming((*it)->pid);
 
       // Add stream to no setup set
-      if (!(*it)->is_setup)
+      if (!(*it)->has_stream_info)
         m_nosetup.insert((*it)->pid);
 
       if (g_bExtraDebug)
@@ -496,7 +497,7 @@ bool Demux::update_pvr_stream(uint16_t pid)
     stream->iBitRate       = es->stream_info.bit_rate;
     stream->iBitsPerSample = es->stream_info.bits_Per_sample;
 
-    if (es->is_setup)
+    if (es->has_stream_info)
     {
       // Now stream is setup. Remove it from no setup set
       std::set<uint16_t>::iterator it = m_nosetup.find(es->pid);

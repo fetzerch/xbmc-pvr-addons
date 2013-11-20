@@ -59,7 +59,7 @@ private:
 
   bool get_stream_data(ElementaryStream::STREAM_PKT* pkt);
   void reset_posmap();
-  
+
   // PVR interfaces
   uint16_t find_main_stream();
   void populate_pvr_streams();
