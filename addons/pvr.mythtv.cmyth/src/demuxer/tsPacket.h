@@ -53,9 +53,11 @@ public:
     if (stream)
       delete stream;
   }
-  
+
   void Reset(void)
   {
+    continuity = 0xff;
+    wait_unit_start = true;
     packet_table.Reset();
     if (stream)
       stream->Reset();

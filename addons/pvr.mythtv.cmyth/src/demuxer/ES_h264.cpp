@@ -19,7 +19,6 @@
  */
 
 #include <stdlib.h>
-#include <assert.h>
 
 #include "ES_h264.h"
 #include "bitstream.h"
@@ -56,6 +55,8 @@ ES_h264::ES_h264(uint16_t pes_pid)
   m_vbvSize                     = 0;
   m_PixelAspect.den             = 1;
   m_PixelAspect.num             = 0;
+  m_DTS                         = 0;
+  m_PTS                         = 0;
   es_alloc_init                 = 240000;
   Reset();
 }

@@ -28,7 +28,7 @@
 #include "ES_Subtitle.h"
 #include "ES_Teletext.h"
 
-#define MAX_RESYNC_SIZE 65536
+using namespace PLATFORM;
 
 AVContext::AVContext(TSDemuxer* const demux, uint64_t pos, uint16_t channel)
   : av_pos(pos)
@@ -44,11 +44,12 @@ AVContext::AVContext(TSDemuxer* const demux, uint64_t pos, uint16_t channel)
   , packet(NULL)
 {
   m_demux = demux;
+  memset(av_buf, 0, sizeof(av_buf));
 };
 
 void AVContext::Reset(void)
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   pid = 0xffff;
   transport_error = false;
@@ -67,7 +68,7 @@ uint16_t AVContext::GetPID() const
 
 PACKET_TYPE AVContext::GetPIDType() const
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   if (packet)
     return packet->packet_type;
@@ -76,7 +77,7 @@ PACKET_TYPE AVContext::GetPIDType() const
 
 uint16_t AVContext::GetPIDChannel() const
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   if (packet)
     return packet->channel;
@@ -85,7 +86,7 @@ uint16_t AVContext::GetPIDChannel() const
 
 bool AVContext::HasPIDStreamData() const
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   // PES packets append frame buffer of elementary stream until next start of unit
   // On new unit start, flag is held
@@ -101,7 +102,7 @@ bool AVContext::HasPIDPayload() const
 
 ElementaryStream* AVContext::GetPIDStream()
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   if (packet && packet->packet_type == PACKET_TYPE_PES)
   {
@@ -114,7 +115,7 @@ ElementaryStream* AVContext::GetPIDStream()
 
 std::vector<ElementaryStream*> AVContext::GetStreams()
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   std::vector<ElementaryStream*> v;
   for (std::map<uint16_t, Packet>::iterator it = packets.begin(); it != packets.end(); it++)
@@ -125,7 +126,7 @@ std::vector<ElementaryStream*> AVContext::GetStreams()
 
 void AVContext::StartStreaming(uint16_t pid)
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   std::map<uint16_t, Packet>::iterator it = packets.find(pid);
   if (it != packets.end())
@@ -134,7 +135,7 @@ void AVContext::StartStreaming(uint16_t pid)
 
 void AVContext::StopStreaming(uint16_t pid)
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   std::map<uint16_t, Packet>::iterator it = packets.find(pid);
   if (it != packets.end())
@@ -143,7 +144,7 @@ void AVContext::StopStreaming(uint16_t pid)
 
 ElementaryStream* AVContext::GetStream(uint16_t pid) const
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   std::map<uint16_t, Packet>::const_iterator it = packets.find(pid);
   if (it != packets.end())
@@ -153,7 +154,7 @@ ElementaryStream* AVContext::GetStream(uint16_t pid) const
 
 uint16_t AVContext::GetChannel(uint16_t pid) const
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   std::map<uint16_t, Packet>::const_iterator it = packets.find(pid);
   if (it != packets.end())
@@ -163,12 +164,11 @@ uint16_t AVContext::GetChannel(uint16_t pid) const
 
 void AVContext::ResetPackets()
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   for (std::map<uint16_t, Packet>::iterator it = packets.begin(); it != packets.end(); it++)
   {
     it->second.Reset();
-    it->second.wait_unit_start = true;
   }
 }
 
@@ -310,7 +310,7 @@ uint64_t AVContext::GetPosition() const
  */
 int AVContext::ProcessTSPacket()
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   int ret = AVCONTEXT_CONTINUE;
   std::map<uint16_t, Packet>::iterator it;
@@ -319,7 +319,7 @@ int AVContext::ProcessTSPacket()
     return AVCONTEXT_TS_NOSYNC;
 
   uint16_t header = av_rb16(this->av_buf + 1);
-  this->pid = (header & 0x1fff) != 0;
+  this->pid = header & 0x1fff;
   this->transport_error = (header & 0x8000) != 0;
   this->payload_unit_start = (header & 0x4000) != 0;
   // Cleaning context
@@ -337,7 +337,7 @@ int AVContext::ProcessTSPacket()
   uint8_t flags = av_rb8(this->av_buf + 3);
   bool has_payload = (flags & 0x10) != 0;
   bool is_discontinuity = false;
-  uint8_t continuity_counter = (flags & 0x0f) != 0;
+  uint8_t continuity_counter = flags & 0x0f;
   bool has_adaptation = (flags & 0x20) != 0;
   size_t n = 0;
   if (has_adaptation)
@@ -397,8 +397,6 @@ int AVContext::ProcessTSPacket()
         if (!this->payload_unit_start)
         {
           it->second.Reset();
-          it->second.wait_unit_start = true;
-          it->second.continuity = continuity_counter;
           demux_dbg(DEMUX_DBG_WARN, "PID %.4x discontinuity detected: found %u, expected %u\n", this->pid, continuity_counter, expected_cc);
           return AVCONTEXT_DISCONTINUITY;
         }
@@ -431,7 +429,7 @@ int AVContext::ProcessTSPacket()
  */
 int AVContext::ProcessTSPayload()
 {
-  LockGuard lock(mutex);
+  CLockObject lock(mutex);
 
   if (!this->packet)
     return AVCONTEXT_CONTINUE;
@@ -698,7 +696,7 @@ int AVContext::parse_ts_psi()
           {
             // No parser: pass-through
             es = new ElementaryStream(pes_pid);
-            es->is_setup = true;
+            es->has_stream_info = true;
           }
 
           es->stream_type = stream_type;
@@ -871,7 +869,7 @@ int AVContext::parse_ts_pes()
 
   // parse header table
   bool has_pts = false;
-  
+
   if (this->packet->packet_table.len >= 9)
   {
     uint8_t flags = av_rb8(this->packet->packet_table.buf + 7);
