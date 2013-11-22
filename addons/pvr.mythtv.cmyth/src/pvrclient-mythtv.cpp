@@ -39,6 +39,7 @@ PVRClientMythTV::PVRClientMythTV()
  , m_connectionString("")
  , m_categories()
  , m_channelGroups()
+ , m_demux(NULL)
 {
 }
 
@@ -60,6 +61,12 @@ PVRClientMythTV::~PVRClientMythTV()
   {
     delete m_scheduleManager;
     m_scheduleManager = NULL;
+  }
+
+  if (m_demux)
+  {
+    delete m_demux;
+    m_demux = NULL;
   }
 }
 
@@ -1418,6 +1425,8 @@ bool PVRClientMythTV::OpenLiveStream(const PVR_CHANNEL &channel)
 
             if (m_rec.SpawnLiveTV((*channelByNumberIt).second))
             {
+              if(g_bDemuxing)
+                m_demux = new Demux(m_rec);
               XBMC->Log(LOG_DEBUG, "%s - Done", __FUNCTION__);
               return true;
             }
@@ -1463,6 +1472,11 @@ void PVRClientMythTV::CloseLiveStream()
   m_pEventHandler->DisablePlayback();
   m_pEventHandler->AllowLiveChainUpdate();
 
+  if (m_demux)
+  {
+    delete m_demux;
+    m_demux = NULL;
+  }
   // Resume fileOps
   m_fileOps->Resume();
 
@@ -1520,6 +1534,11 @@ bool PVRClientMythTV::SwitchChannel(const PVR_CHANNEL &channelinfo)
   m_pEventHandler->SetRecordingListener("", m_file);
   m_pEventHandler->SetRecorder(m_rec);
   m_pEventHandler->AllowLiveChainUpdate();
+  if (m_demux)
+  {
+    delete m_demux;
+    m_demux = NULL;
+  }
   // Try to reopen live stream
   if (retval)
     retval = OpenLiveStream(channelinfo);
@@ -1600,6 +1619,33 @@ PVR_ERROR PVRClientMythTV::SignalStatus(PVR_SIGNAL_STATUS &signalStatus)
     XBMC->Log(LOG_DEBUG, "%s - Done", __FUNCTION__);
 
   return PVR_ERROR_NO_ERROR;
+}
+
+PVR_ERROR PVRClientMythTV::GetStreamProperties(PVR_STREAM_PROPERTIES* pProperties)
+{
+  return m_demux && m_demux->GetStreamProperties(pProperties) ? PVR_ERROR_NO_ERROR : PVR_ERROR_SERVER_ERROR;
+}
+
+void PVRClientMythTV::DemuxAbort(void)
+{
+  if (m_demux)
+    m_demux->Abort();
+}
+
+void PVRClientMythTV::DemuxFlush(void)
+{
+  if (m_demux)
+    m_demux->Flush();
+}
+
+DemuxPacket* PVRClientMythTV::DemuxRead(void)
+{
+  return m_demux ? m_demux->Read() : NULL;
+}
+
+bool PVRClientMythTV::SeekTime(int time, bool backwards, double* startpts)
+{
+  return m_demux ? m_demux->SeekTime(time, backwards, startpts) : false;
 }
 
 bool PVRClientMythTV::OpenRecordedStream(const PVR_RECORDING &recording)
