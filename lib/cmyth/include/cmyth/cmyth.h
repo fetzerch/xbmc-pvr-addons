@@ -799,12 +799,20 @@ extern cmyth_keyframe_t cmyth_keyframe_create(void);
 
 extern char *cmyth_keyframe_string(cmyth_keyframe_t kf);
 
+extern uint32_t cmyth_keyframe_number(cmyth_keyframe_t kf);
+
+extern int64_t cmyth_keyframe_pos(cmyth_keyframe_t kf);
+
 /*
  * -----------------------------------------------------------------
  * Position Map Operations
  * -----------------------------------------------------------------
  */
 extern cmyth_posmap_t cmyth_posmap_create(void);
+
+extern int cmyth_posmap_count(cmyth_posmap_t pm);
+
+extern cmyth_keyframe_t cmyth_posmap_keyframe(cmyth_posmap_t pm, int index);
 
 /*
  * -----------------------------------------------------------------
