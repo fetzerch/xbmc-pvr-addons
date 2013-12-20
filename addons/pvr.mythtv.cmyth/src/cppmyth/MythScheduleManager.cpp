@@ -832,6 +832,7 @@ RuleMetadata MythScheduleHelper1226::GetMetadata(const MythRecordingRule &rule) 
       meta.isRepeating = true;
       meta.weekDays = 0x7F;
       meta.marker = "d";
+      break;
     case MythRecordingRule::RT_WeeklyRecord:
     case MythRecordingRule::RT_FindWeeklyRecord:
       meta.isRepeating = true;
