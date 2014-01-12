@@ -21,6 +21,7 @@
 
 #include "cppmyth/MythRecorder.h"
 #include "demuxer/tsDemuxer.h"
+#include "client.h"
 
 #include <platform/threads/threads.h>
 #include <platform/threads/mutex.h>

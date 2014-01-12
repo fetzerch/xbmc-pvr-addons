@@ -430,7 +430,7 @@ void Demux::populate_pvr_streams()
 {
   CLockObject Lock(m_mutex);
 
-  std::vector<PVR_STREAM_PROPERTIES::PVR_STREAM> new_streams;
+  std::vector<XbmcPvrStream> new_streams;
   const std::vector<ElementaryStream*> es_streams = m_AVContext->GetStreams();
   for (std::vector<ElementaryStream*>::const_iterator it = es_streams.begin(); it != es_streams.end(); it++)
   {
@@ -438,7 +438,7 @@ void Demux::populate_pvr_streams()
     xbmc_codec_t codec = CODEC->GetCodecByName(codec_name);
     if (codec.codec_type != XBMC_CODEC_TYPE_UNKNOWN)
     {
-      PVR_STREAM_PROPERTIES::PVR_STREAM new_stream;
+      XbmcPvrStream new_stream;
       m_streams.GetStreamData((*it)->pid, &new_stream);
 
       new_stream.iCodecId       = codec.codec_id;
@@ -483,7 +483,7 @@ bool Demux::update_pvr_stream(uint16_t pid)
 
   CLockObject Lock(m_mutex);
 
-  PVR_STREAM_PROPERTIES::PVR_STREAM* stream = m_streams.GetStreamById(es->pid);
+  XbmcPvrStream* stream = m_streams.GetStreamById(es->pid);
   if (stream)
   {
     recode_language(es->stream_info.language, stream->strLanguage);
