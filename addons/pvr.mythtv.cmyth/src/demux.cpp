@@ -385,13 +385,6 @@ void Demux::reset_posmap()
   }
 }
 
-uint16_t Demux::find_main_stream()
-{
-  if (m_streams.m_streams.iStreamCount > 0)
-    return m_streams.m_streams.stream[0].iPhysicalId;
-  return 0xffff;
-}
-
 static inline int stream_identifier(int composition_id, int ancillary_id)
 {
   return ((composition_id & 0xff00) >> 8)
@@ -430,6 +423,8 @@ void Demux::populate_pvr_streams()
 {
   CLockObject Lock(m_mutex);
 
+  uint16_t mainPid = 0xffff;
+  int mainType = XBMC_CODEC_TYPE_UNKNOWN;
   std::vector<XbmcPvrStream> new_streams;
   const std::vector<ElementaryStream*> es_streams = m_AVContext->GetStreams();
   for (std::vector<ElementaryStream*>::const_iterator it = es_streams.begin(); it != es_streams.end(); it++)
@@ -438,6 +433,20 @@ void Demux::populate_pvr_streams()
     xbmc_codec_t codec = CODEC->GetCodecByName(codec_name);
     if (codec.codec_type != XBMC_CODEC_TYPE_UNKNOWN)
     {
+      // Find the main stream:
+      // The best candidate would be the first video. Else the first audio
+      switch (mainType)
+      {
+      case XBMC_CODEC_TYPE_VIDEO:
+        break;
+      case XBMC_CODEC_TYPE_AUDIO:
+        if (codec.codec_type != XBMC_CODEC_TYPE_VIDEO)
+          break;
+      default:
+        mainPid = (*it)->pid;
+        mainType = codec.codec_type;
+      }
+
       XbmcPvrStream new_stream;
       m_streams.GetStreamData((*it)->pid, &new_stream);
 
@@ -469,7 +478,7 @@ void Demux::populate_pvr_streams()
   }
   m_streams.UpdateStreams(new_streams);
   // Renew main stream
-  m_mainStreamPID = find_main_stream();
+  m_mainStreamPID = mainPid;
 }
 
 bool Demux::update_pvr_stream(uint16_t pid)
