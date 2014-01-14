@@ -62,7 +62,6 @@ private:
   void reset_posmap();
 
   // PVR interfaces
-  uint16_t find_main_stream();
   void populate_pvr_streams();
   bool update_pvr_stream(uint16_t pid);
   void push_stream_change();
